@@ -8,7 +8,9 @@ landing/dist/
 web/dist/
 browser/out/
 browser/dist-app/
-browser/resources/
+browser/resources/*.ico
+browser/resources/*.icns
+browser/resources/*.png
 .env
 .env.local
 .claude/

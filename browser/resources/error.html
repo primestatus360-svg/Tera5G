@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>Page Not Available</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      height: 100%;
+      background: #000000;
+      color: #ffffff;
+      font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', 'Inter', Arial, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      overflow: hidden;
+    }
+
+    /* Radial background glow */
+    .glow {
+      position: fixed;
+      inset: 0;
+      background: radial-gradient(
+        ellipse 760px 480px at 50% 38%,
+        rgba(255, 59, 48, 0.055) 0%,
+        transparent 65%
+      );
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .page {
+      position: relative;
+      z-index: 1;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 32px 24px;
+    }
+
+    /* Glass card */
+    .card {
+      width: 400px;
+      max-width: calc(100vw - 48px);
+      padding: 44px 48px 40px;
+      background: rgba(28, 28, 30, 0.78);
+      backdrop-filter: blur(60px) saturate(180%);
+      -webkit-backdrop-filter: blur(60px) saturate(180%);
+      border: 0.5px solid rgba(255, 255, 255, 0.10);
+      border-radius: 24px;
+      box-shadow:
+        0 40px 80px rgba(0, 0, 0, 0.55),
+        inset 0 0.5px 0 rgba(255, 255, 255, 0.08),
+        0 0 0 0.5px rgba(255, 255, 255, 0.03);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0;
+      animation: appear 0.28s cubic-bezier(0.16, 1, 0.3, 1) both;
+    }
+
+    @keyframes appear {
+      from { opacity: 0; transform: translateY(10px) scale(0.97); }
+      to   { opacity: 1; transform: translateY(0)   scale(1); }
+    }
+
+    /* Icon */
+    .icon-wrap {
+      width: 64px;
+      height: 64px;
+      border-radius: 50%;
+      background: rgba(255, 59, 48, 0.08);
+      border: 0.5px solid rgba(255, 59, 48, 0.18);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 24px;
+      flex-shrink: 0;
+    }
+
+    .icon-wrap svg {
+      width: 28px;
+      height: 28px;
+    }
+
+    /* Title */
+    .title {
+      font-size: 17px;
+      font-weight: 600;
+      color: #ffffff;
+      text-align: center;
+      letter-spacing: -0.2px;
+      line-height: 1.35;
+      margin-bottom: 10px;
+    }
+
+    .subtitle {
+      font-size: 12px;
+      font-weight: 400;
+      color: rgba(255, 255, 255, 0.38);
+      text-align: center;
+      margin-bottom: 24px;
+    }
+
+    /* URL pill */
+    .url-pill {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 0.5px solid rgba(255, 255, 255, 0.10);
+      border-radius: 8px;
+      padding: 7px 12px;
+      margin-bottom: 32px;
+      max-width: 100%;
+      overflow: hidden;
+    }
+
+    .url-pill svg {
+      width: 11px;
+      height: 11px;
+      stroke: rgba(255,255,255,0.30);
+      fill: none;
+      stroke-width: 1.8;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      flex-shrink: 0;
+    }
+
+    .url-text {
+      font-size: 11px;
+      color: rgba(255, 255, 255, 0.35);
+      font-family: 'SF Mono', 'Cascadia Code', 'Consolas', monospace;
+      letter-spacing: 0.1px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      min-width: 0;
+    }
+
+    /* Divider */
+    .divider {
+      width: 100%;
+      height: 0.5px;
+      background: rgba(255, 255, 255, 0.07);
+      margin-bottom: 24px;
+    }
+
+    /* Action buttons */
+    .actions {
+      display: flex;
+      gap: 8px;
+      width: 100%;
+    }
+
+    .btn {
+      flex: 1;
+      height: 36px;
+      border-radius: 10px;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      font-family: inherit;
+      letter-spacing: -0.1px;
+      transition: background 0.15s ease, opacity 0.15s ease, transform 0.08s ease;
+      -webkit-user-select: none;
+      user-select: none;
+    }
+    .btn:active { transform: scale(0.96); }
+
+    .btn-primary {
+      background: rgba(255, 255, 255, 0.10);
+      border: 0.5px solid rgba(255, 255, 255, 0.20);
+      color: #ffffff;
+    }
+    .btn-primary:hover { background: rgba(255, 255, 255, 0.15); }
+
+    .btn-ghost {
+      background: transparent;
+      border: 0.5px solid rgba(255, 255, 255, 0.10);
+      color: rgba(255, 255, 255, 0.45);
+    }
+    .btn-ghost:hover { background: rgba(255, 255, 255, 0.05); color: rgba(255,255,255,0.65); }
+
+    .btn svg {
+      width: 12px; height: 12px;
+      stroke: currentColor;
+      fill: none;
+      stroke-width: 1.8;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      flex-shrink: 0;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="glow"></div>
+
+  <div class="page">
+    <div class="card">
+
+      <!-- Icon -->
+      <div class="icon-wrap">
+        <svg viewBox="0 0 28 28" fill="none">
+          <!-- WiFi arcs, red-tinted -->
+          <path d="M4 10.5a14 14 0 0 1 20 0"
+            stroke="rgba(255,69,58,0.32)" stroke-width="1.8" stroke-linecap="round"/>
+          <path d="M7.5 14.5a9 9 0 0 1 13 0"
+            stroke="rgba(255,69,58,0.52)" stroke-width="1.8" stroke-linecap="round"/>
+          <path d="M11 18.5a4.5 4.5 0 0 1 6 0"
+            stroke="rgba(255,69,58,0.72)" stroke-width="1.8" stroke-linecap="round"/>
+          <circle cx="14" cy="22.5" r="1.6" fill="rgba(255,69,58,0.85)"/>
+          <!-- Slash -->
+          <line x1="4" y1="26" x2="24" y2="4"
+            stroke="rgba(255,59,48,0.28)" stroke-width="1.4" stroke-linecap="round"/>
+        </svg>
+      </div>
+
+      <p class="title">This page could not be loaded</p>
+      <p class="subtitle">Check your connection or try again later</p>
+
+      <!-- URL -->
+      <div class="url-pill">
+        <svg viewBox="0 0 24 24">
+          <circle cx="12" cy="12" r="10"/>
+          <path d="M12 2a14.5 14.5 0 0 1 0 20 14.5 14.5 0 0 1 0-20"/>
+          <line x1="2" y1="12" x2="22" y2="12"/>
+        </svg>
+        <span class="url-text" id="urlText">—</span>
+      </div>
+
+      <div class="divider"></div>
+
+      <div class="actions">
+        <button class="btn btn-primary" id="retryBtn">
+          <svg viewBox="0 0 24 24">
+            <path d="M3.5 10a6.5 6.5 0 1 0 1.2-3.8"/>
+            <polyline points="1 4 4 7 7 4"/>
+          </svg>
+          Try Again
+        </button>
+        <button class="btn btn-ghost" id="homeBtn">
+          <svg viewBox="0 0 24 24">
+            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+            <polyline points="9 22 9 12 15 12 15 22"/>
+          </svg>
+          Home
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    var params  = new URLSearchParams(location.search);
+    var failUrl = params.get('url') || '';
+
+    document.getElementById('urlText').textContent = failUrl || '—';
+
+    function nav(url) {
+      if (window.tab && typeof window.tab.navigate === 'function') {
+        window.tab.navigate(url);
+      } else {
+        window.location.href = url;
+      }
+    }
+
+    document.getElementById('retryBtn').addEventListener('click', function() {
+      if (failUrl) nav(failUrl);
+    });
+
+    document.getElementById('homeBtn').addEventListener('click', function() {
+      if (window.tab && typeof window.tab.home === 'function') {
+        window.tab.home();
+      } else {
+        history.back();
+      }
+    });
+  </script>
+
+</body>
+</html>

@@ -1,0 +1,933 @@
+<!DOCTYPE html>
+<html lang="en" data-state="select">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>Tera5G</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      height: 100%;
+      background: #000000;
+      color: #ffffff;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      overflow: hidden;
+    }
+
+    ::-webkit-scrollbar { width: 3px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(84,84,88,0.40); border-radius: 10px; }
+
+    /* ══════════════════════════════════════════
+       PAGE SHELL
+    ══════════════════════════════════════════ */
+    .page {
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 32px 24px;
+      overflow-y: auto;
+    }
+
+    .wrap {
+      width: 100%;
+      max-width: 400px;
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+      animation: rise 0.3s cubic-bezier(0.16,1,0.3,1) both;
+    }
+
+    @keyframes rise {
+      from { opacity: 0; transform: translateY(10px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ── Wordmark ── */
+    .wordmark {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 1.8px;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.25);
+      text-align: center;
+      margin-bottom: 6px;
+    }
+
+    .page-title {
+      font-size: 22px;
+      font-weight: 800;
+      letter-spacing: -0.6px;
+      color: #ffffff;
+      text-align: center;
+      margin-bottom: 4px;
+    }
+
+    .page-sub {
+      font-size: 12px;
+      color: rgba(235,235,245,0.55);
+      text-align: center;
+      line-height: 1.5;
+      margin-bottom: 18px;
+    }
+
+    /* ══════════════════════════════════════════
+       PLAN SELECTOR
+    ══════════════════════════════════════════ */
+    .plan-row {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+
+    .plan-btn {
+      flex: 1;
+      padding: 12px 12px 10px;
+      background: #1C1C1E;
+      border: 1px solid rgba(84,84,88,0.65);
+      border-radius: 14px;
+      cursor: pointer;
+      text-align: left;
+      transition: background 0.15s, border-color 0.15s, transform 0.1s;
+      -webkit-user-select: none;
+      user-select: none;
+    }
+    .plan-btn:active { transform: scale(0.97); }
+    .plan-btn.active {
+      background: rgba(29,184,20,0.10);
+      border: 1.5px solid rgba(29,184,20,0.42);
+    }
+
+    .plan-label {
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.8px;
+      text-transform: uppercase;
+      color: rgba(235,235,245,0.45);
+      margin-bottom: 5px;
+    }
+    .plan-btn.active .plan-label { color: rgba(29,184,20,0.75); }
+
+    .plan-price {
+      font-size: 22px;
+      font-weight: 800;
+      letter-spacing: -0.8px;
+      color: #ffffff;
+      line-height: 1;
+    }
+    .plan-price-sub {
+      font-size: 12px;
+      font-weight: 500;
+      color: rgba(235,235,245,0.40);
+      margin-top: 3px;
+    }
+
+    .amount-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(29,184,20,0.12);
+      border: 1px solid rgba(29,184,20,0.28);
+      border-radius: 20px;
+      padding: 7px 14px;
+    }
+    .amount-pill svg {
+      width: 13px; height: 13px;
+      stroke: #1DB814; fill: none;
+      stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round;
+      flex-shrink: 0;
+    }
+    .amount-pill-text {
+      font-size: 12px;
+      font-weight: 700;
+      color: #1DB814;
+      letter-spacing: 0.1px;
+    }
+
+    /* ══════════════════════════════════════════
+       ERROR BANNER
+    ══════════════════════════════════════════ */
+    .error-msg {
+      display: none;
+      font-size: 13px;
+      font-weight: 500;
+      color: #FF453A;
+      text-align: center;
+      margin-bottom: 12px;
+    }
+    .error-msg.visible { display: block; }
+
+    /* ══════════════════════════════════════════
+       PHONE INPUT
+    ══════════════════════════════════════════ */
+    .field-label {
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 1.2px;
+      text-transform: uppercase;
+      color: rgba(235,235,245,0.40);
+      margin-bottom: 8px;
+    }
+
+    .phone-wrap {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: #2C2C2E;
+      border: 0.5px solid rgba(84,84,88,0.65);
+      border-radius: 10px;
+      padding: 0 16px;
+      height: 52px;
+      margin-bottom: 16px;
+      transition: border-color 0.15s;
+    }
+    .phone-wrap.valid { border-color: #1DB814; }
+
+    .phone-wrap svg {
+      width: 19px; height: 19px;
+      stroke: rgba(255,255,255,0.30); fill: none;
+      stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round;
+      flex-shrink: 0;
+      transition: stroke 0.15s;
+    }
+    .phone-wrap.valid svg { stroke: #1DB814; }
+
+    #phoneInput {
+      flex: 1;
+      background: none;
+      border: none;
+      outline: none;
+      color: #ffffff;
+      font-size: 17px;
+      font-weight: 600;
+      font-family: inherit;
+      caret-color: #1DB814;
+    }
+    #phoneInput::placeholder { color: rgba(255,255,255,0.20); font-weight: 400; }
+
+    /* ══════════════════════════════════════════
+       PROVIDER TOGGLE
+    ══════════════════════════════════════════ */
+    .field-label-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      margin-bottom: 8px;
+    }
+
+    .provider-row {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 14px;
+    }
+
+    .provider-btn {
+      flex: 1;
+      padding: 12px 10px;
+      background: #2C2C2E;
+      border: 1px solid rgba(84,84,88,0.65);
+      border-radius: 14px;
+      cursor: pointer;
+      text-align: center;
+      transition: background 0.15s, border-color 0.15s, transform 0.1s;
+      -webkit-user-select: none;
+      user-select: none;
+    }
+    .provider-btn:active { transform: scale(0.97); }
+
+    .provider-name {
+      font-size: 18px;
+      font-weight: 800;
+      color: rgba(255,255,255,0.38);
+      letter-spacing: -0.3px;
+      line-height: 1;
+      margin-bottom: 2px;
+    }
+    .provider-sub {
+      font-size: 11px;
+      font-weight: 500;
+      color: rgba(235,235,245,0.35);
+    }
+
+    /* MTN active */
+    .provider-btn[data-p="MTN"].active {
+      background: rgba(255,204,0,0.10);
+      border: 2px solid rgba(255,204,0,0.45);
+    }
+    .provider-btn[data-p="MTN"].active .provider-name { color: #FFCC00; }
+    .provider-btn[data-p="MTN"].active .provider-sub  { color: rgba(255,204,0,0.60); }
+
+    /* AIRTEL active */
+    .provider-btn[data-p="AIRTEL"].active {
+      background: rgba(220,38,38,0.09);
+      border: 2px solid rgba(220,38,38,0.40);
+    }
+    .provider-btn[data-p="AIRTEL"].active .provider-name { color: #EF4444; }
+    .provider-btn[data-p="AIRTEL"].active .provider-sub  { color: rgba(239,68,68,0.55); }
+
+    /* ══════════════════════════════════════════
+       PAY BUTTON
+    ══════════════════════════════════════════ */
+    .pay-btn {
+      width: 100%;
+      height: 50px;
+      background: #1DB814;
+      border: none;
+      border-radius: 14px;
+      color: #ffffff;
+      font-size: 16px;
+      font-weight: 800;
+      font-family: inherit;
+      letter-spacing: 0.1px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      box-shadow: 0 0 20px rgba(29,184,20,0.40);
+      transition: opacity 0.15s, transform 0.1s;
+      -webkit-user-select: none;
+      user-select: none;
+      margin-bottom: 12px;
+    }
+    .pay-btn:hover { opacity: 0.88; }
+    .pay-btn:active { transform: scale(0.98); }
+    .pay-btn:disabled { opacity: 0.30; cursor: not-allowed; box-shadow: none; }
+
+    .pay-caption {
+      font-size: 12px;
+      color: rgba(235,235,245,0.38);
+      text-align: center;
+      line-height: 1.5;
+    }
+
+    /* ══════════════════════════════════════════
+       MODE TABS (Pay / Voucher)
+    ══════════════════════════════════════════ */
+    .mode-tabs {
+      display: flex;
+      gap: 6px;
+      margin-bottom: 16px;
+      background: rgba(255,255,255,0.05);
+      border: 0.5px solid rgba(84,84,88,0.40);
+      border-radius: 10px;
+      padding: 4px;
+    }
+    .mode-tab {
+      flex: 1;
+      padding: 8px 12px;
+      background: none;
+      border: none;
+      border-radius: 7px;
+      color: rgba(235,235,245,0.40);
+      font-size: 13px;
+      font-weight: 600;
+      font-family: inherit;
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s;
+      -webkit-user-select: none;
+      user-select: none;
+    }
+    .mode-tab.active {
+      background: rgba(29,184,20,0.14);
+      color: #1DB814;
+    }
+
+    /* Pay mode vs voucher mode visibility */
+    .v-select[data-mode="pay"]     .pay-form     { display: flex; flex-direction: column; }
+    .v-select[data-mode="voucher"] .voucher-form  { display: flex; flex-direction: column; }
+    .pay-form, .voucher-form { display: none; }
+
+    /* ── Voucher input ── */
+    .voucher-wrap {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: #2C2C2E;
+      border: 0.5px solid rgba(84,84,88,0.65);
+      border-radius: 10px;
+      padding: 0 16px;
+      height: 52px;
+      margin-bottom: 14px;
+      transition: border-color 0.15s;
+    }
+    .voucher-wrap.valid { border-color: #1DB814; }
+
+    #voucherInput {
+      flex: 1;
+      background: none;
+      border: none;
+      outline: none;
+      color: #ffffff;
+      font-size: 16px;
+      font-weight: 700;
+      font-family: 'Courier New', monospace;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      caret-color: #ffffff;
+    }
+    #voucherInput::placeholder { color: rgba(255,255,255,0.20); font-weight: 400; font-family: inherit; letter-spacing: 0; text-transform: none; }
+
+    /* ══════════════════════════════════════════
+       STATE VIEWS
+    ══════════════════════════════════════════ */
+    [data-state="select"]  .v-select  { display: flex; flex-direction: column; }
+    [data-state="pending"] .v-pending { display: flex; flex-direction: column; align-items: center; }
+    [data-state="done"]    .v-done    { display: flex; flex-direction: column; align-items: center; }
+
+    .v-select, .v-pending, .v-done { display: none; }
+
+    /* ══════════════════════════════════════════
+       PENDING STATE
+    ══════════════════════════════════════════ */
+    .v-pending { text-align: center; }
+
+    .rings {
+      position: relative;
+      width: 120px; height: 120px;
+      display: flex; align-items: center; justify-content: center;
+      margin-bottom: 28px;
+    }
+    .ring-outer {
+      position: absolute; inset: 0;
+      border-radius: 60px;
+      background: rgba(29,184,20,0.06);
+      border: 1px solid rgba(29,184,20,0.20);
+    }
+    .ring-inner {
+      position: absolute;
+      width: 86px; height: 86px;
+      border-radius: 43px;
+      background: rgba(29,184,20,0.10);
+      border: 1.5px solid rgba(29,184,20,0.28);
+      top: 50%; left: 50%;
+      transform: translate(-50%,-50%);
+    }
+    .ring-icon {
+      position: relative; z-index: 1;
+      width: 36px; height: 36px;
+      stroke: #1DB814; fill: none;
+      stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round;
+    }
+
+    .pending-title {
+      font-size: 24px; font-weight: 800; letter-spacing: -0.5px;
+      color: #ffffff; margin-bottom: 14px;
+    }
+
+    .pending-chip {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: rgba(29,184,20,0.10);
+      border: 1px solid rgba(29,184,20,0.25);
+      border-radius: 20px; padding: 7px 14px;
+      margin-bottom: 24px;
+    }
+    .pending-chip svg { width: 13px; height: 13px; stroke: #1DB814; fill: none; stroke-width: 2.2; stroke-linecap: round; flex-shrink: 0; }
+    .pending-chip span { font-size: 13px; font-weight: 700; color: #1DB814; }
+
+    .pending-body {
+      font-size: 14px; color: rgba(235,235,245,0.55);
+      line-height: 1.6; margin-bottom: 28px; max-width: 300px;
+    }
+    .pending-body strong { color: #ffffff; }
+
+    .waiting-row {
+      display: flex; align-items: center; gap: 8px;
+      margin-bottom: 32px;
+    }
+    .waiting-dot {
+      width: 7px; height: 7px; border-radius: 50%;
+      background: #1DB814;
+      animation: blink 1.4s ease-in-out infinite;
+    }
+    .waiting-dot:nth-child(2) { animation-delay: 0.2s; }
+    .waiting-dot:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes blink {
+      0%, 80%, 100% { opacity: 0.25; transform: scale(0.85); }
+      40% { opacity: 1; transform: scale(1); }
+    }
+    .waiting-text { font-size: 13px; color: rgba(235,235,245,0.40); }
+
+    .pending-resend {
+      width: 100%; padding: 16px;
+      background: rgba(255,255,255,0.07);
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 16px;
+      color: rgba(235,235,245,0.65);
+      font-size: 15px; font-weight: 600; font-family: inherit;
+      cursor: pointer; margin-bottom: 12px;
+      transition: background 0.15s;
+    }
+    .pending-resend:hover { background: rgba(255,255,255,0.11); }
+
+    .pending-cancel {
+      background: none; border: none;
+      color: rgba(235,235,245,0.35);
+      font-size: 14px; font-weight: 500; font-family: inherit;
+      cursor: pointer; padding: 12px;
+    }
+
+    /* ══════════════════════════════════════════
+       DONE STATE
+    ══════════════════════════════════════════ */
+    .v-done { text-align: center; }
+
+    .done-rings {
+      position: relative;
+      width: 120px; height: 120px;
+      display: flex; align-items: center; justify-content: center;
+      margin-bottom: 24px;
+    }
+    .done-ring-outer {
+      position: absolute; inset: 0; border-radius: 60px;
+      background: rgba(29,184,20,0.08);
+      border: 1px solid rgba(29,184,20,0.22);
+    }
+    .done-ring-inner {
+      position: absolute;
+      width: 86px; height: 86px; border-radius: 43px;
+      background: rgba(29,184,20,0.14);
+      border: 1.5px solid rgba(29,184,20,0.38);
+      top: 50%; left: 50%; transform: translate(-50%,-50%);
+    }
+    .done-check-icon {
+      position: relative; z-index: 1;
+      width: 38px; height: 38px;
+      stroke: #1DB814; fill: none;
+      stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round;
+    }
+
+    .done-title {
+      font-size: 24px; font-weight: 800; letter-spacing: -0.5px;
+      color: #ffffff; margin-bottom: 6px;
+    }
+    .done-sub {
+      font-size: 13px; color: rgba(235,235,245,0.45);
+      margin-bottom: 4px;
+    }
+    .done-time {
+      font-size: 13px; font-weight: 600;
+      color: rgba(29,184,20,0.80); margin-bottom: 28px;
+    }
+
+    .done-btn {
+      width: 100%; padding: 16px;
+      background: #1DB814; border: none; border-radius: 14px;
+      color: #ffffff; font-size: 16px; font-weight: 800;
+      font-family: inherit; letter-spacing: 0.1px;
+      cursor: pointer;
+      box-shadow: 0 0 20px rgba(29,184,20,0.40);
+      transition: opacity 0.15s;
+    }
+    .done-btn:hover { opacity: 0.88; }
+  </style>
+</head>
+<body>
+<div class="page">
+  <div class="wrap">
+
+    <!-- ═══════════════════════════════
+         SELECT STATE
+    ═══════════════════════════════ -->
+    <div class="v-select" data-mode="pay">
+
+      <p class="wordmark">Tera5G Browser</p>
+      <h1 class="page-title">Browse the web free</h1>
+      <p class="page-sub">No internet connection required — your traffic<br/>tunnels through the Tera5G relay.</p>
+
+      <!-- Mode tabs -->
+      <div class="mode-tabs">
+        <button class="mode-tab active" id="tabPay">Pay with Mobile Money</button>
+        <button class="mode-tab" id="tabVoucher">Redeem Voucher</button>
+      </div>
+
+      <!-- ── PAY FORM ── -->
+      <div class="pay-form">
+        <!-- Plan selector -->
+        <div class="plan-row">
+          <div class="plan-btn active" data-plan="6h" id="plan6h">
+            <div class="plan-label">6 Hours</div>
+            <div class="plan-price">550</div>
+            <div class="plan-price-sub">UGX</div>
+          </div>
+          <div class="plan-btn" data-plan="24h" id="plan24h">
+            <div class="plan-label">24 Hours</div>
+            <div class="plan-price">1,000</div>
+            <div class="plan-price-sub">UGX</div>
+          </div>
+        </div>
+
+        <!-- Access pill -->
+        <div style="display:flex;justify-content:center;margin-bottom:14px;">
+          <div class="amount-pill">
+            <svg viewBox="0 0 24 24">
+              <circle cx="12" cy="12" r="10"/>
+              <polyline points="12 6 12 12 16 14"/>
+            </svg>
+            <span class="amount-pill-text" id="heroLabel">Free access for 6 hours · No data needed</span>
+          </div>
+        </div>
+
+        <!-- Error -->
+        <div class="error-msg" id="errorMsg"></div>
+
+        <!-- Phone -->
+        <p class="field-label">Phone Number</p>
+        <div class="phone-wrap" id="phoneWrap">
+          <svg viewBox="0 0 24 24" id="phoneIcon">
+            <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/>
+          </svg>
+          <input id="phoneInput" type="tel" placeholder="+256 700 000 000" autocomplete="off" inputmode="numeric"/>
+        </div>
+
+        <!-- Provider -->
+        <p class="field-label">Network</p>
+        <div class="provider-row">
+          <div class="provider-btn active" data-p="MTN" id="btnMTN">
+            <div class="provider-name">MTN</div>
+            <div class="provider-sub">Mobile Money</div>
+          </div>
+          <div class="provider-btn" data-p="AIRTEL" id="btnAIRTEL">
+            <div class="provider-name">AIRTEL</div>
+            <div class="provider-sub">Airtel Money</div>
+          </div>
+        </div>
+
+        <!-- Pay -->
+        <button class="pay-btn" id="payBtn" disabled>Pay UGX 550</button>
+
+        <p class="pay-caption">
+          Browse any website for free once confirmed.<br/>
+          No mobile data or SIM internet required.
+        </p>
+      </div><!-- /.pay-form -->
+
+      <!-- ── VOUCHER FORM ── -->
+      <div class="voucher-form">
+        <p class="field-label" style="margin-top:4px;">Voucher Code</p>
+        <div class="voucher-wrap" id="voucherWrap">
+          <svg viewBox="0 0 24 24" style="width:18px;height:18px;stroke:rgba(255,255,255,0.30);fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0;">
+            <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/>
+          </svg>
+          <input id="voucherInput" type="text" placeholder="XXXX-XXXX" maxlength="9" autocomplete="off" spellcheck="false"/>
+        </div>
+
+        <!-- Voucher error -->
+        <div class="error-msg" id="voucherErrorMsg"></div>
+
+        <button class="pay-btn" id="redeemBtn" disabled style="margin-top:2px;">Redeem Voucher</button>
+
+        <p class="pay-caption" style="margin-top:10px;">
+          Enter a voucher code provided by Tera5G.<br/>
+          Instant activation — no payment required.
+        </p>
+      </div><!-- /.voucher-form -->
+
+    </div>
+
+    <!-- ═══════════════════════════════
+         PENDING STATE
+    ═══════════════════════════════ -->
+    <div class="v-pending">
+
+      <div class="rings">
+        <div class="ring-outer"></div>
+        <div class="ring-inner"></div>
+        <svg class="ring-icon" viewBox="0 0 24 24">
+          <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/>
+        </svg>
+      </div>
+
+      <p class="pending-title">Check Your Phone</p>
+
+      <div class="pending-chip">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        <span id="pendingChipText">Free access for 6 hours</span>
+      </div>
+
+      <p class="pending-body">
+        A USSD menu has appeared on <strong id="pendingPhone">+256 700 000 000</strong>.<br/>
+        Select <strong>1</strong> and enter your mobile money PIN<br/>
+        to approve <strong id="pendingAmt">UGX 550</strong>.<br/>
+        Your session starts automatically.
+      </p>
+
+      <div class="waiting-row">
+        <div class="waiting-dot"></div>
+        <div class="waiting-dot"></div>
+        <div class="waiting-dot"></div>
+        <span class="waiting-text">Waiting for confirmation&hellip;</span>
+      </div>
+
+      <button class="pending-resend" id="resendBtn">Didn't get the prompt? Resend USSD</button>
+      <button class="pending-cancel" id="cancelBtn">Cancel</button>
+    </div>
+
+    <!-- ═══════════════════════════════
+         DONE STATE
+    ═══════════════════════════════ -->
+    <div class="v-done">
+
+      <div class="done-rings">
+        <div class="done-ring-outer"></div>
+        <div class="done-ring-inner"></div>
+        <svg class="done-check-icon" viewBox="0 0 24 24">
+          <polyline points="20 6 9 17 4 12"/>
+        </svg>
+      </div>
+
+      <p class="done-title">Session Active</p>
+      <p class="done-sub">Payment confirmed — you're connected</p>
+      <p class="done-time" id="doneTime"></p>
+
+      <button class="done-btn" id="doneBtn">Start Browsing</button>
+    </div>
+
+  </div>
+</div>
+
+<script>
+  var html     = document.documentElement
+  var selPlan  = '6h'
+  var selProv  = 'MTN'
+  var sessId   = null
+  var pollTimer= null
+  var pollN    = 0
+  var MAX_POLL = 60
+
+  var PLANS = {
+    '6h':  { amount: 550,  label: '6 Hours',  caption: 'Free access for 6 hours' },
+    '24h': { amount: 1000, label: '24 Hours', caption: 'Free access for 24 hours' },
+  }
+
+  function fmt(n) { return n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',') }
+
+  function setState(s) { html.setAttribute('data-state', s) }
+
+  function updateHero() {
+    var p = PLANS[selPlan]
+    document.getElementById('heroLabel').textContent = p.caption + ' · No data needed'
+    document.getElementById('payBtn').textContent    = 'Pay UGX ' + fmt(p.amount)
+    syncPayBtn()
+  }
+
+  // ── Plan select ───────────────────────────────────────────────────────────
+  document.querySelectorAll('.plan-btn').forEach(function(el) {
+    el.addEventListener('click', function() {
+      document.querySelectorAll('.plan-btn').forEach(function(b) { b.classList.remove('active') })
+      this.classList.add('active')
+      selPlan = this.dataset.plan
+      updateHero()
+    })
+  })
+
+  // ── Provider select ───────────────────────────────────────────────────────
+  document.querySelectorAll('.provider-btn').forEach(function(el) {
+    el.addEventListener('click', function() {
+      document.querySelectorAll('.provider-btn').forEach(function(b) { b.classList.remove('active') })
+      this.classList.add('active')
+      selProv = this.dataset.p
+    })
+  })
+
+  // ── Phone input ───────────────────────────────────────────────────────────
+  var phoneInput = document.getElementById('phoneInput')
+  var phoneWrap  = document.getElementById('phoneWrap')
+
+  phoneInput.addEventListener('input', function() {
+    var digits = this.value.replace(/\D/g, '')
+    var valid  = digits.length >= 7
+    phoneWrap.classList.toggle('valid', valid)
+    syncPayBtn()
+  })
+
+  function syncPayBtn() {
+    var digits = phoneInput.value.replace(/\D/g, '')
+    document.getElementById('payBtn').disabled = digits.length < 7
+  }
+
+  // ── Error helper ──────────────────────────────────────────────────────────
+  function showError(msg) {
+    var el = document.getElementById('errorMsg')
+    el.textContent = msg
+    el.classList.add('visible')
+  }
+  function clearError() { document.getElementById('errorMsg').classList.remove('visible') }
+
+  // ── Pay ───────────────────────────────────────────────────────────────────
+  document.getElementById('payBtn').addEventListener('click', function() {
+    var phone = phoneInput.value.trim()
+    if (!phone) return
+    clearError()
+    this.disabled = true
+    this.textContent = 'Connecting…'
+    initiate(phone, selPlan, selProv)
+  })
+
+  function initiate(phone, plan, prov) {
+    if (window.tab && typeof window.tab.payInitiate === 'function') {
+      window.tab.payInitiate({ phone: phone, plan: plan, provider: prov })
+        .then(function(r) {
+          if (r.error) { showError(r.error); updateHero(); return }
+          sessId = r.sessionId
+          goPending(phone, plan)
+        })
+        .catch(function() { showError('Could not reach payment service.'); updateHero() })
+    } else {
+      showError('Payment bridge unavailable — dev mode.')
+      updateHero()
+    }
+  }
+
+  function goPending(phone, plan) {
+    var p   = PLANS[plan]
+    var raw = phone.replace(/^0/, '').replace(/\D/g, '')
+    document.getElementById('pendingPhone').textContent    = '+256 ' + raw
+    document.getElementById('pendingAmt').textContent      = 'UGX ' + fmt(p.amount)
+    document.getElementById('pendingChipText').textContent = p.caption
+    setState('pending')
+    pollN = 0
+    pollTimer = setInterval(poll, 3000)
+  }
+
+  function poll() {
+    pollN++
+    if (pollN > MAX_POLL) {
+      clearInterval(pollTimer)
+      setState('select')
+      showError('Payment timed out — please try again.')
+      return
+    }
+    if (!sessId) return
+    if (window.tab && typeof window.tab.payStatus === 'function') {
+      window.tab.payStatus(sessId).then(function(r) {
+        if (r.status === 'active') {
+          clearInterval(pollTimer)
+          goDone(r.plan, r.expiresAt)
+        } else if (r.status === 'failed') {
+          clearInterval(pollTimer)
+          setState('select')
+          showError('Payment was declined or cancelled.')
+        }
+      }).catch(function() {})
+    }
+  }
+
+  function goDone(plan, expiresAt) {
+    var p    = PLANS[plan] || PLANS['6h']
+    var d    = new Date(expiresAt)
+    var time = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    document.getElementById('doneTime').textContent = p.label + ' · expires at ' + time
+    setState('done')
+  }
+
+  document.getElementById('doneBtn').addEventListener('click', function() {
+    if (window.tab && typeof window.tab.home === 'function') window.tab.home()
+  })
+
+  document.getElementById('resendBtn').addEventListener('click', function() {
+    clearInterval(pollTimer)
+    setState('select')
+    if (phoneInput.value) initiate(phoneInput.value, selPlan, selProv)
+  })
+
+  document.getElementById('cancelBtn').addEventListener('click', function() {
+    clearInterval(pollTimer)
+    sessId = null
+    setState('select')
+    updateHero()
+  })
+
+  if (window.tab && typeof window.tab.onPayConfirmed === 'function') {
+    window.tab.onPayConfirmed(function(d) {
+      clearInterval(pollTimer)
+      goDone(d.plan, d.expiresAt)
+    })
+  }
+
+  // ── Mode tabs (Pay / Voucher) ─────────────────────────────────────────────
+  var vSelect = document.querySelector('.v-select')
+
+  document.getElementById('tabPay').addEventListener('click', function() {
+    vSelect.setAttribute('data-mode', 'pay')
+    document.getElementById('tabPay').classList.add('active')
+    document.getElementById('tabVoucher').classList.remove('active')
+    clearError()
+    clearVoucherError()
+  })
+
+  document.getElementById('tabVoucher').addEventListener('click', function() {
+    vSelect.setAttribute('data-mode', 'voucher')
+    document.getElementById('tabVoucher').classList.add('active')
+    document.getElementById('tabPay').classList.remove('active')
+    clearError()
+    clearVoucherError()
+  })
+
+  // ── Voucher input ─────────────────────────────────────────────────────────
+  var voucherInput = document.getElementById('voucherInput')
+  var voucherWrap  = document.getElementById('voucherWrap')
+  var redeemBtn    = document.getElementById('redeemBtn')
+
+  voucherInput.addEventListener('input', function() {
+    // Auto-format to XXXX-XXXX
+    var raw = this.value.replace(/[^A-Za-z0-9]/g, '').toUpperCase().slice(0, 8)
+    this.value = raw.length > 4 ? raw.slice(0, 4) + '-' + raw.slice(4) : raw
+    var valid = raw.length === 8
+    voucherWrap.classList.toggle('valid', valid)
+    redeemBtn.disabled = !valid
+  })
+
+  function clearVoucherError() {
+    var el = document.getElementById('voucherErrorMsg')
+    el.textContent = ''
+    el.classList.remove('visible')
+  }
+
+  function showVoucherError(msg) {
+    var el = document.getElementById('voucherErrorMsg')
+    el.textContent = msg
+    el.classList.add('visible')
+  }
+
+  redeemBtn.addEventListener('click', function() {
+    var code = voucherInput.value.trim()
+    if (!code) return
+    clearVoucherError()
+    redeemBtn.disabled = true
+    redeemBtn.textContent = 'Redeeming…'
+
+    if (window.tab && typeof window.tab.payRedeem === 'function') {
+      window.tab.payRedeem(code)
+        .then(function(data) {
+          if (data.error) {
+            showVoucherError(data.error)
+            redeemBtn.disabled = false
+            redeemBtn.textContent = 'Redeem Voucher'
+          } else {
+            goDone(data.plan, data.expiresAt)
+          }
+        })
+        .catch(function() {
+          showVoucherError('Could not reach server.')
+          redeemBtn.disabled = false
+          redeemBtn.textContent = 'Redeem Voucher'
+        })
+    } else {
+      showVoucherError('Voucher bridge unavailable.')
+      redeemBtn.disabled = false
+      redeemBtn.textContent = 'Redeem Voucher'
+    }
+  })
+
+  updateHero()
+</script>
+</body>
+</html>

@@ -7,7 +7,7 @@ const VERSION = '1.0.0'
 const GH_RELEASE = `https://github.com/primestatus360-svg/Tera5G/releases/download/v${VERSION}`
 
 const DL = {
-  windows: `${GH_RELEASE}/Tera5G-Browser-win-x64.zip`,
+  windows: `${GH_RELEASE}/Tera5G-Browser-Setup-${VERSION}.exe`,
   mac:     `${GH_RELEASE}/Tera5G-Browser-${VERSION}-mac.dmg`,
   linux:   `${GH_RELEASE}/Tera5G-Browser-${VERSION}-linux.AppImage`,
   android: `/downloads/Tera5G-${VERSION}.apk`,
@@ -600,7 +600,7 @@ function Downloads() {
 
             <div className="space-y-2.5">
               {[
-                { icon: <IcoWindows />, label: 'Download for Windows', href: DL.windows, ext: 'x64 .zip' },
+                { icon: <IcoWindows />, label: 'Download for Windows', href: DL.windows, ext: 'x64 .exe installer' },
                 { icon: <IcoApple />,   label: 'Download for macOS',   href: DL.mac,     ext: 'Intel + Apple Silicon .dmg' },
                 { icon: <IcoLinux />,   label: 'Download for Linux',   href: DL.linux,   ext: 'x64 .AppImage' },
               ].map(p => (

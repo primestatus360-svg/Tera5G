@@ -111,19 +111,21 @@ function layout(): void {
 function activateSession(data: StoredSession): void {
   sessionActive = true
   writeStoredSession(data)
-  // Reload all tabs that are still showing the paywall → go to newtab
-  for (const tab of tabs.values()) {
-    const cur = tab.view.webContents.getURL()
-    if (cur.startsWith('file://') && cur.includes('paywall')) {
-      tab.view.webContents.loadFile(newtabPath())
+  // Defer navigation so any pending IPC invoke (pay-redeem / pay-status) can
+  // return its response to the renderer before the webContents navigates away.
+  setImmediate(() => {
+    for (const tab of tabs.values()) {
+      const cur = tab.view.webContents.getURL()
+      if (cur.startsWith('file://') && cur.includes('paywall')) {
+        tab.view.webContents.loadFile(newtabPath())
+      }
     }
-  }
-  // Broadcast pay-confirmed to all tab renderers
-  for (const tab of tabs.values()) {
-    if (!tab.view.webContents.isDestroyed()) {
-      tab.view.webContents.send('pay-confirmed', { plan: data.plan, expiresAt: data.expiresAt })
+    for (const tab of tabs.values()) {
+      if (!tab.view.webContents.isDestroyed()) {
+        tab.view.webContents.send('pay-confirmed', { plan: data.plan, expiresAt: data.expiresAt })
+      }
     }
-  }
+  })
 }
 
 // ── Tab management ────────────────────────────────────────────────────────────

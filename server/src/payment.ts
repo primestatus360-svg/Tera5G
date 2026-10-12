@@ -1,8 +1,6 @@
 import { Router, Request, Response } from 'express'
 import { randomUUID } from 'crypto'
-import https from 'https'
-import http  from 'http'
-import { URL } from 'url'
+import { ProxyAgent, fetch as undiciFetch } from 'undici'
 import { store } from './store'
 
 // ── Config ────────────────────────────────────────────────────────────────────
@@ -11,12 +9,17 @@ const YO_API_URL  = process.env.YO_API_URL  ?? 'https://paymentsapi1.yo.co.ug/yb
 const YO_USERNAME = process.env.YO_API_USERNAME ?? ''
 const YO_PASSWORD = process.env.YO_API_PASSWORD ?? ''
 const PUBLIC_URL  = (process.env.PUBLIC_URL ?? '').replace(/\/$/, '')
+const FIXIE_URL   = process.env.FIXIE_URL ?? ''
 const WEBHOOK_URL = `${PUBLIC_URL}/api/pay/webhook`
 
 const PLANS = {
   '6h':  { amount: 550,  ms: 6  * 3_600_000, label: '6 Hours Browsing'  },
   '24h': { amount: 1000, ms: 24 * 3_600_000, label: '24 Hours Browsing' },
 }
+
+const fixieAgent = FIXIE_URL
+  ? new ProxyAgent({ uri: FIXIE_URL, connectTimeout: 15_000, headersTimeout: 30_000, bodyTimeout: 30_000 })
+  : undefined
 
 // ── Session store ─────────────────────────────────────────────────────────────
 
@@ -51,6 +54,10 @@ function normalizePhone(raw: string): string {
   return '256' + cleaned
 }
 
+function escapeXml(s: string): string {
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&apos;')
+}
+
 function extractXml(xml: string, tag: string): string {
   const m = xml.match(new RegExp(`<${tag}>([\\s\\S]*?)<\\/${tag}>`))
   return m ? m[1].trim() : ''
@@ -62,43 +69,35 @@ function buildXml(s: PaySession): string {
   return `<?xml version="1.0" encoding="UTF-8"?>
 <AutoCreate>
   <Request>
-    <APIUsername>${YO_USERNAME}</APIUsername>
-    <APIPassword>${YO_PASSWORD}</APIPassword>
+    <APIUsername>${escapeXml(YO_USERNAME)}</APIUsername>
+    <APIPassword>${escapeXml(YO_PASSWORD)}</APIPassword>
     <Method>AutoCreateRequest</Method>
     <Amount>${s.amount}</Amount>
-    <Account>${s.phone}</Account>
-    <ExternalReference>${s.id}</ExternalReference>
-    <Description>Tera5G Browser - ${plan.label}</Description>
+    <Account>${escapeXml(s.phone)}</Account>
+    <ExternalReference>${escapeXml(s.id)}</ExternalReference>
+    <Description>Tera5G Browser - ${escapeXml(plan.label)}</Description>
     <ProviderReferenceText>Tera5G</ProviderReferenceText>
-    <DepositNotificationURL>${WEBHOOK_URL}</DepositNotificationURL>
-    <InstantNotificationURL>${WEBHOOK_URL}</InstantNotificationURL>
-    <FailureNotificationURL>${WEBHOOK_URL}</FailureNotificationURL>
+    <DepositNotificationURL>${escapeXml(WEBHOOK_URL)}</DepositNotificationURL>
+    <InstantNotificationURL>${escapeXml(WEBHOOK_URL)}</InstantNotificationURL>
+    <FailureNotificationURL>${escapeXml(WEBHOOK_URL)}</FailureNotificationURL>
     <NetworkCode>${ncode}</NetworkCode>
     <NonBlocking>TRUE</NonBlocking>
   </Request>
 </AutoCreate>`
 }
 
-function postXml(xml: string): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const u    = new URL(YO_API_URL)
-    const mod  = u.protocol === 'https:' ? https : http
-    const body = Buffer.from(xml, 'utf8')
-    const req  = mod.request({
-      hostname: u.hostname,
-      port:     u.port || (u.protocol === 'https:' ? 443 : 80),
-      path:     u.pathname + u.search,
-      method:   'POST',
-      headers:  { 'Content-Type': 'application/xml', 'Content-Length': body.length },
-    }, res => {
-      let out = ''
-      res.on('data', c => { out += c })
-      res.on('end',  () => resolve(out))
-    })
-    req.on('error', reject)
-    req.write(body)
-    req.end()
-  })
+async function callYo(xml: string): Promise<string> {
+  const headers = {
+    'Content-Type':              'text/xml; charset=UTF-8',
+    'Content-transfer-encoding': 'text',
+    'Accept':                    'application/xml, text/xml, */*',
+  }
+  if (fixieAgent) {
+    const res = await undiciFetch(YO_API_URL, { method: 'POST', headers, body: xml, dispatcher: fixieAgent })
+    return res.text()
+  }
+  const res = await fetch(YO_API_URL, { method: 'POST', headers, body: xml })
+  return res.text()
 }
 
 // ── Router ────────────────────────────────────────────────────────────────────
@@ -126,12 +125,13 @@ paymentRouter.post('/initiate', async (req: Request, res: Response) => {
   sessions.set(id, session)
 
   try {
-    const xml      = buildXml(session)
-    const response = await postXml(xml)
-    const status   = extractXml(response, 'AutoCreateStatus')
-    const code     = extractXml(response, 'StatusCode')
+    const xml        = buildXml(session)
+    const response   = await callYo(xml)
+    const status     = extractXml(response, 'AutoCreateStatus')
+    const code       = extractXml(response, 'StatusCode')
+    const txnStatus  = extractXml(response, 'TransactionStatus')
 
-    if (status !== 'OK' && code !== '01') {
+    if (status !== 'OK' && code !== '01' && txnStatus.toUpperCase() !== 'PENDING') {
       session.status = 'failed'
       const msg = extractXml(response, 'StatusMessage') || 'Payment initiation failed'
       console.error('[pay] Yo! error:', msg, '\n', response.slice(0, 400))
@@ -187,8 +187,8 @@ paymentRouter.post('/webhook', (req: Request, res: Response) => {
 
   if (ok) {
     const plan = PLANS[session.plan]
-    session.status        = 'active'
-    session.expiresAt     = Date.now() + plan.ms
+    session.status         = 'active'
+    session.expiresAt      = Date.now() + plan.ms
     session.transactionRef = internalRef
     console.log(`[pay] ✓ ${session.plan} activated for ${session.phone} — expires ${new Date(session.expiresAt).toISOString()}`)
   } else {
@@ -220,13 +220,13 @@ function buildWithdrawXml(id: string, phone: string, amount: number, provider: s
   return `<?xml version="1.0" encoding="UTF-8"?>
 <AutoCreate>
   <Request>
-    <APIUsername>${YO_USERNAME}</APIUsername>
-    <APIPassword>${YO_PASSWORD}</APIPassword>
+    <APIUsername>${escapeXml(YO_USERNAME)}</APIUsername>
+    <APIPassword>${escapeXml(YO_PASSWORD)}</APIPassword>
     <Method>WithdrawFunds</Method>
     <Amount>${amount}</Amount>
-    <Account>${phone}</Account>
-    <ExternalReference>${id}</ExternalReference>
-    <Description>${note || 'Tera5G Admin Withdrawal'}</Description>
+    <Account>${escapeXml(phone)}</Account>
+    <ExternalReference>${escapeXml(id)}</ExternalReference>
+    <Description>${escapeXml(note || 'Tera5G Admin Withdrawal')}</Description>
     <ProviderReferenceText>Tera5G</ProviderReferenceText>
     <NetworkCode>${ncode}</NetworkCode>
     <NonBlocking>FALSE</NonBlocking>
@@ -301,7 +301,7 @@ adminPaymentRouter.post('/withdraw', async (req: Request, res: Response) => {
 
   try {
     const xml      = buildWithdrawXml(id, rec.phone, rec.amount, rec.provider, rec.note)
-    const response = await postXml(xml)
+    const response = await callYo(xml)
     const status   = extractXml(response, 'AutoWithdrawStatus') || extractXml(response, 'AutoCreateStatus')
     const code     = extractXml(response, 'StatusCode')
     const txRef    = extractXml(response, 'TransactionReference') || extractXml(response, 'InternalTransactionId')

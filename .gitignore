@@ -7,6 +7,7 @@ mobile/node_modules/
 landing/dist/
 web/dist/
 browser/out/
+browser/dist-app/
 browser/resources/
 .env
 .env.local

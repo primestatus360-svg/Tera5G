@@ -8,7 +8,7 @@ const TABBAR_H   = 32
 const NAVBAR_H   = 40
 const TOOLBAR_H  = TABBAR_H + NAVBAR_H   // 72 px total
 const PROXY      = process.env.TERA5G_PROXY  ?? 'http://127.0.0.1:8080'
-const SERVER_URL = process.env.TERA5G_SERVER ?? (is.dev ? 'http://localhost:3001' : 'https://tera5g-production.up.railway.app')
+const SERVER_URL = process.env.TERA5G_SERVER ?? (is.dev ? 'http://localhost:3001' : 'https://tera5g.world')
 
 interface Tab {
   id:      string

@@ -7,6 +7,8 @@ import { v4 as uuidv4 } from 'uuid'
 import { URL } from 'url'
 import path from 'path'
 import fs from 'fs'
+import net from 'net'
+import { WebSocketServer } from 'ws'
 import { store } from './store'
 import { tickActiveRelayers, awardFirstRelay, awardRelayRequest } from './scoring'
 import { startProxyServer } from './proxy'
@@ -269,6 +271,83 @@ h1{color:#ff4444;margin:0 0 16px}p{color:#8090b0;font-size:13px;line-height:1.6}
     if (!res.headersSent) res.status(502).send(`Bad Gateway: ${err.message}`)
   })
 
+  proxyReq.end()
+})
+
+// ── Production relay — /api/browse (session-based, no CTF scoring) ────────────
+//
+//  Used by the embedded local proxy in the Electron browser.
+//  All browser tab HTTPS traffic goes via WebSocket /ws/tunnel (see below).
+//  HTTP traffic (rare) goes through this endpoint.
+// ──────────────────────────────────────────────────────────────────────────────
+
+app.all('/api/browse', (req, res) => {
+  const { url, sessionId } = req.query as { url?: string; sessionId?: string }
+
+  if (!url || !sessionId) {
+    return res.status(400).json({ error: 'url and sessionId required' })
+  }
+
+  const sess = sessions.get(sessionId)
+  if (!sess || sess.status !== 'active' || sess.expiresAt < Date.now()) {
+    return res.status(401).send(`<!DOCTYPE html><html><head><meta charset="utf-8">
+<title>Tera5G — Session Expired</title>
+<style>body{background:#050b14;color:#c8d8f0;font-family:monospace;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0}
+.c{border:1px solid #ff444440;background:#0d1526;border-radius:12px;padding:32px;max-width:400px;text-align:center}
+h2{color:#ff4444;margin:0 0 12px}p{color:#8090b0;font-size:13px}</style></head>
+<body><div class="c"><h2>Session Expired</h2><p>Your browsing session has expired. Please renew your plan.</p></div></body></html>`)
+  }
+
+  let targetUrl: URL
+  try { targetUrl = new URL(url) } catch {
+    return res.status(400).json({ error: 'Invalid URL' })
+  }
+
+  const protocol = targetUrl.protocol === 'https:' ? https : http
+  const options = {
+    hostname: targetUrl.hostname,
+    port:     targetUrl.port ? parseInt(targetUrl.port) : (targetUrl.protocol === 'https:' ? 443 : 80),
+    path:     targetUrl.pathname + (targetUrl.search || ''),
+    method:   req.method,
+    headers:  {
+      'Host':            targetUrl.host,
+      'User-Agent':      (req.headers['user-agent'] as string) || 'Mozilla/5.0',
+      'Accept':          (req.headers['accept'] as string) || '*/*',
+      'Accept-Language': (req.headers['accept-language'] as string) || 'en-US,en',
+      'Accept-Encoding': 'identity',
+      'Connection':      'close',
+    },
+    timeout: 30_000,
+  }
+
+  const proxyReq = (protocol as typeof https).request(options, proxyRes => {
+    if (
+      proxyRes.statusCode &&
+      proxyRes.statusCode >= 300 &&
+      proxyRes.statusCode < 400 &&
+      proxyRes.headers.location
+    ) {
+      try {
+        const redir = new URL(proxyRes.headers.location, url)
+        return res.redirect(`/api/browse?sessionId=${sessionId}&url=${encodeURIComponent(redir.href)}`)
+      } catch {
+        return res.status(502).json({ error: 'Bad redirect' })
+      }
+    }
+
+    delete proxyRes.headers['x-frame-options']
+    delete proxyRes.headers['content-security-policy']
+    delete proxyRes.headers['content-security-policy-report-only']
+
+    res.status(proxyRes.statusCode ?? 200)
+    for (const [k, v] of Object.entries(proxyRes.headers)) {
+      if (v) res.setHeader(k, v as string | string[])
+    }
+    proxyRes.pipe(res, { end: true })
+  })
+
+  proxyReq.on('timeout', () => { proxyReq.destroy(); if (!res.headersSent) res.status(504).json({ error: 'Timeout' }) })
+  proxyReq.on('error',   err => { if (!res.headersSent) res.status(502).json({ error: err.message }) })
   proxyReq.end()
 })
 
@@ -610,6 +689,50 @@ if (fs.existsSync(publicDir)) {
     else res.status(404).send('Web build not found.')
   })
 }
+
+// ── WebSocket HTTPS tunnel (/ws/tunnel) ───────────────────────────────────────
+//
+//  The Electron browser's embedded local proxy (port 8080) uses this to
+//  tunnel HTTPS CONNECT requests. The server opens a raw TCP connection to
+//  the target host and relays bytes bidirectionally over the WebSocket.
+// ──────────────────────────────────────────────────────────────────────────────
+
+const wss = new WebSocketServer({ noServer: true })
+
+httpServer.on('upgrade', (req, socket, head) => {
+  const reqUrl = new URL(req.url!, 'http://localhost')
+  if (reqUrl.pathname !== '/ws/tunnel') return  // let socket.io handle its own upgrades
+
+  const sessionId = reqUrl.searchParams.get('sessionId') ?? ''
+  const sess      = sessions.get(sessionId)
+
+  if (!sess || sess.status !== 'active' || sess.expiresAt < Date.now()) {
+    socket.write('HTTP/1.1 401 Unauthorized\r\n\r\n')
+    socket.destroy()
+    return
+  }
+
+  const host = reqUrl.searchParams.get('host') ?? ''
+  const port = parseInt(reqUrl.searchParams.get('port') ?? '443', 10)
+
+  wss.handleUpgrade(req, socket, head, ws => {
+    const target = net.createConnection(port, host)
+
+    target.on('connect', () => {
+      ws.on('message', data => { target.write(data as Buffer) })
+      target.on('data',  data => { if (ws.readyState === 1) ws.send(data) })
+      target.on('end',   () => ws.close())
+      target.on('error', () => ws.close())
+      ws.on('close', () => target.destroy())
+      ws.on('error', () => target.destroy())
+    })
+
+    target.on('error', err => {
+      console.error(`Tunnel error ${host}:${port} —`, err.message)
+      if (ws.readyState <= 1) ws.close()
+    })
+  })
+})
 
 // ── Start ─────────────────────────────────────────────────────────────────────
 

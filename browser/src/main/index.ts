@@ -2,6 +2,10 @@ import { app, BrowserWindow, WebContentsView, ipcMain } from 'electron'
 import { join } from 'path'
 import { randomUUID } from 'crypto'
 import { existsSync, readFileSync, writeFileSync } from 'fs'
+import * as http from 'http'
+import * as https from 'https'
+import * as net from 'net'
+import WebSocket from 'ws'
 import { is } from '@electron-toolkit/utils'
 
 const TABBAR_H   = 32
@@ -28,6 +32,7 @@ let win: BrowserWindow
 const tabs   = new Map<string, Tab>()
 let activeId = ''
 let sessionActive = false
+let activeSessionId = ''   // cached for the local proxy
 
 // ── Session helpers ───────────────────────────────────────────────────────────
 
@@ -54,6 +59,27 @@ function clearStoredSession(): void {
     const p = sessionFilePath()
     if (existsSync(p)) { writeFileSync(p, '{}') }
   } catch { /* ignore */ }
+}
+
+// Validate stored session against the server. Returns true if still active.
+async function validateAndRestoreSession(): Promise<boolean> {
+  const stored = readStoredSession()
+  if (!stored) return false
+  try {
+    const res  = await fetch(`${SERVER_URL}/api/pay/status/${stored.sessionId}`)
+    const data = await res.json() as { status: string; plan: string; expiresAt: number }
+    if (data.status === 'active') {
+      writeStoredSession({ sessionId: stored.sessionId, plan: data.plan, expiresAt: data.expiresAt })
+      activeSessionId = stored.sessionId
+      return true
+    }
+    clearStoredSession()
+    return false
+  } catch {
+    // Server unreachable — trust local cache
+    activeSessionId = stored.sessionId
+    return true
+  }
 }
 
 // ── Path helpers ──────────────────────────────────────────────────────────────
@@ -109,10 +135,9 @@ function layout(): void {
 // ── Session activation ────────────────────────────────────────────────────────
 
 function activateSession(data: StoredSession): void {
-  sessionActive = true
+  sessionActive    = true
+  activeSessionId  = data.sessionId
   writeStoredSession(data)
-  // Defer navigation so any pending IPC invoke (pay-redeem / pay-status) can
-  // return its response to the renderer before the webContents navigates away.
   setImmediate(() => {
     for (const tab of tabs.values()) {
       const cur = tab.view.webContents.getURL()
@@ -126,6 +151,108 @@ function activateSession(data: StoredSession): void {
       }
     }
   })
+}
+
+// ── Local HTTP proxy (port 8080) ──────────────────────────────────────────────
+//
+//  All browser tab traffic is routed through http://127.0.0.1:8080 via
+//  view.webContents.session.setProxy(). This proxy relays requests to the
+//  Tera5G relay server so the device doesn't need direct internet access.
+//
+//  HTTP  requests → GET /api/browse?url=...&sessionId=... on tera5g.world
+//  HTTPS requests → CONNECT tunnel over WebSocket /ws/tunnel on tera5g.world
+// ─────────────────────────────────────────────────────────────────────────────
+
+function noSessionPage(): string {
+  return `<!DOCTYPE html><html><head><meta charset="utf-8">
+<title>Tera5G — No active session</title>
+<style>body{background:#050b14;color:#c8d8f0;font-family:monospace;display:flex;
+align-items:center;justify-content:center;min-height:100vh;margin:0}
+.c{border:1px solid #1db81440;background:#0d1526;border-radius:12px;padding:32px;max-width:400px;text-align:center}
+h2{color:#1DB814;margin:0 0 12px}p{color:#8090b0;font-size:13px;line-height:1.6;margin:0}</style></head>
+<body><div class="c"><h2>Tera5G</h2>
+<p>Activate a session to start browsing.<br>Use the paywall to purchase a plan.</p>
+</div></body></html>`
+}
+
+function startLocalProxy(): void {
+  const server = http.createServer((req, res) => {
+    if (!activeSessionId) {
+      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' })
+      res.end(noSessionPage())
+      return
+    }
+
+    // Build relay URL
+    const target = req.url!
+    const wsOrigin = SERVER_URL.replace(/^http/, 'https')
+    const relayUrl = `${wsOrigin}/api/browse?url=${encodeURIComponent(target)}&sessionId=${encodeURIComponent(activeSessionId)}`
+
+    const parsedRelay = new URL(relayUrl)
+    const isHttps     = parsedRelay.protocol === 'https:'
+    const port        = parsedRelay.port ? parseInt(parsedRelay.port) : (isHttps ? 443 : 80)
+    const mod         = isHttps ? https : http
+
+    const opts: https.RequestOptions = {
+      hostname: parsedRelay.hostname,
+      port,
+      path:     parsedRelay.pathname + parsedRelay.search,
+      method:   'GET',
+      headers:  { 'User-Agent': req.headers['user-agent'] ?? 'Tera5G/1.0' },
+    }
+
+    const proxyReq = mod.request(opts, proxyRes => {
+      res.writeHead(proxyRes.statusCode ?? 200, proxyRes.headers as Record<string, string>)
+      proxyRes.pipe(res, { end: true })
+    })
+    proxyReq.on('error', () => {
+      if (!res.headersSent) { res.writeHead(502); res.end('Bad Gateway') }
+    })
+    proxyReq.end()
+  })
+
+  // HTTPS tunnel via WebSocket
+  server.on('connect', (req, clientSocket, head) => {
+    if (!activeSessionId) {
+      clientSocket.write('HTTP/1.1 407 Proxy Authentication Required\r\n\r\n')
+      clientSocket.destroy()
+      return
+    }
+
+    const [host, portStr] = req.url!.split(':')
+    const port = portStr ?? '443'
+    const wsBase = SERVER_URL.replace(/^https?:/, 'wss:').replace(/^wss:\/\/localhost/, 'ws://localhost')
+    const wsUrl  = `${wsBase}/ws/tunnel?host=${encodeURIComponent(host)}&port=${port}&sessionId=${encodeURIComponent(activeSessionId)}`
+
+    const ws = new WebSocket(wsUrl)
+    ws.binaryType = 'nodebuffer'
+
+    ws.on('open', () => {
+      clientSocket.write('HTTP/1.1 200 Connection Established\r\n\r\n')
+      if (head?.length) ws.send(head)
+
+      clientSocket.on('data',  data => { if (ws.readyState === WebSocket.OPEN) ws.send(data) })
+      ws.on('message',         data => { clientSocket.write(data as Buffer) })
+
+      ws.on('close',  () => { if (!clientSocket.destroyed) clientSocket.destroy() })
+      ws.on('error',  () => { if (!clientSocket.destroyed) clientSocket.destroy() })
+      clientSocket.on('end',   () => ws.close())
+      clientSocket.on('error', () => ws.close())
+    })
+
+    ws.on('error', () => {
+      if (!clientSocket.destroyed) {
+        clientSocket.write('HTTP/1.1 503 Service Unavailable\r\n\r\n')
+        clientSocket.destroy()
+      }
+    })
+  })
+
+  server.on('error', (err: NodeJS.ErrnoException) => {
+    if (err.code !== 'EADDRINUSE') console.error('Local proxy error:', err.message)
+  })
+
+  server.listen(8080, '127.0.0.1')
 }
 
 // ── Tab management ────────────────────────────────────────────────────────────
@@ -219,10 +346,6 @@ function closeTab(id: string): void {
 // ── Window ────────────────────────────────────────────────────────────────────
 
 function createWindow(): void {
-  // Check persisted session before opening the window
-  const stored = readStoredSession()
-  if (stored) sessionActive = true
-
   win = new BrowserWindow({
     width: 1280,
     height: 820,
@@ -328,7 +451,8 @@ function createWindow(): void {
     if (!sessionActive) return
     const s = readStoredSession()
     if (!s) {
-      sessionActive = false
+      sessionActive   = false
+      activeSessionId = ''
       clearStoredSession()
       for (const tab of tabs.values()) {
         tab.view.webContents.loadFile(paywallPath())
@@ -348,7 +472,9 @@ function createWindow(): void {
   }
 }
 
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
+  startLocalProxy()
+  sessionActive = await validateAndRestoreSession()
   createWindow()
   app.on('activate', () => { if (BrowserWindow.getAllWindows().length === 0) createWindow() })
 })

@@ -1,0 +1,13 @@
+node_modules/
+server/dist/
+server/public/
+mobile/dist/
+mobile/.expo/
+mobile/node_modules/
+landing/dist/
+web/dist/
+browser/out/
+browser/resources/
+.env
+.env.local
+.claude/

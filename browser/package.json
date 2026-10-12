@@ -1,0 +1,54 @@
+{
+  "name": "tera5g-browser",
+  "version": "1.0.0",
+  "description": "Tera5G Domain Fronting Browser",
+  "main": "out/main/index.js",
+  "scripts": {
+    "dev": "electron-vite dev",
+    "build": "electron-vite build",
+    "preview": "electron-vite preview",
+    "package:win": "npm run build && electron-builder --win",
+    "package:mac": "npm run build && electron-builder --mac",
+    "package:linux": "npm run build && electron-builder --linux"
+  },
+  "dependencies": {
+    "@electron-toolkit/utils": "^3.0.0"
+  },
+  "devDependencies": {
+    "@electron-toolkit/preload": "^3.0.0",
+    "@electron-toolkit/tsconfig": "^1.0.1",
+    "@types/react": "^18.3.3",
+    "@types/react-dom": "^18.3.0",
+    "@vitejs/plugin-react": "^4.3.1",
+    "electron": "^33.2.0",
+    "electron-builder": "^25.1.8",
+    "electron-vite": "^2.3.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "typescript": "^5.6.3",
+    "vite": "^5.4.11"
+  },
+  "build": {
+    "appId": "com.tera5g.browser",
+    "productName": "Tera5G Browser",
+    "directories": { "output": "dist-app" },
+    "files": ["out/**/*"],
+    "extraResources": [
+      { "from": "resources/newtab.html",   "to": "newtab.html"   },
+      { "from": "resources/error.html",    "to": "error.html"    },
+      { "from": "resources/paywall.html",  "to": "paywall.html"  }
+    ],
+    "win": {
+      "target": [{ "target": "nsis", "arch": ["x64"] }],
+      "icon": "resources/icon.ico"
+    },
+    "mac": {
+      "target": "dmg",
+      "icon": "resources/icon.icns"
+    },
+    "linux": {
+      "target": "AppImage",
+      "icon": "resources/icon.png"
+    }
+  }
+}

@@ -6,7 +6,7 @@ import { Platform } from 'react-native'
 export const SERVER_URL =
   Platform.OS === 'web'
     ? ''
-    : (process.env.EXPO_PUBLIC_SERVER_URL ?? 'http://10.0.2.2:3001').replace(/\/$/, '')
+    : (process.env.EXPO_PUBLIC_SERVER_URL ?? 'https://tera5g-production.up.railway.app').replace(/\/$/, '')
 
 export const TARGET_HOSTS = [
   'blocked-streaming.com',

@@ -916,7 +916,6 @@ function Footer() {
               ['Downloads', '#downloads'],
               ['Features', '#features'],
               ['How It Works', '#how-it-works'],
-              ['Admin', '/admin'],
             ].map(([label, href]) => (
               <a
                 key={label}

@@ -1,0 +1,58 @@
+name: Build Browser (Mac & Linux)
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-mac:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: browser/package-lock.json
+
+      - name: Install dependencies
+        working-directory: browser
+        run: npm ci
+
+      - name: Build & package
+        working-directory: browser
+        run: npm run package:mac
+
+      - name: Upload to release
+        working-directory: browser
+        run: gh release upload v1.0.0 dist-app/*.dmg --clobber --repo ${{ github.repository }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  build-linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: browser/package-lock.json
+
+      - name: Install dependencies
+        working-directory: browser
+        run: npm ci
+
+      - name: Build & package
+        working-directory: browser
+        run: npm run package:linux
+
+      - name: Upload to release
+        working-directory: browser
+        run: gh release upload v1.0.0 dist-app/*.AppImage --clobber --repo ${{ github.repository }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

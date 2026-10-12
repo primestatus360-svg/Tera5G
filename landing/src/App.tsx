@@ -4,10 +4,12 @@ import { useState } from 'react'
 
 const VERSION = '1.0.0'
 
+const GH_RELEASE = `https://github.com/primestatus360-svg/Tera5G/releases/download/v${VERSION}`
+
 const DL = {
-  windows: `https://github.com/primestatus360-svg/Tera5G/releases/download/v${VERSION}/Tera5G-Browser-win-x64.zip`,
-  mac:     `/downloads/Tera5G-${VERSION}.dmg`,
-  linux:   `/downloads/Tera5G-${VERSION}.AppImage`,
+  windows: `${GH_RELEASE}/Tera5G-Browser-win-x64.zip`,
+  mac:     `${GH_RELEASE}/Tera5G-Browser-${VERSION}-mac.dmg`,
+  linux:   `${GH_RELEASE}/Tera5G-Browser-${VERSION}-linux.AppImage`,
   android: `/downloads/Tera5G-${VERSION}.apk`,
 }
 
@@ -598,9 +600,9 @@ function Downloads() {
 
             <div className="space-y-2.5">
               {[
-                { icon: <IcoWindows />, label: 'Download for Windows', href: DL.windows, ext: '.zip' },
-                { icon: <IcoApple />,   label: 'Download for macOS',   href: DL.mac,     ext: '.dmg' },
-                { icon: <IcoLinux />,   label: 'Download for Linux',   href: DL.linux,   ext: '.AppImage' },
+                { icon: <IcoWindows />, label: 'Download for Windows', href: DL.windows, ext: 'x64 .zip' },
+                { icon: <IcoApple />,   label: 'Download for macOS',   href: DL.mac,     ext: 'Intel + Apple Silicon .dmg' },
+                { icon: <IcoLinux />,   label: 'Download for Linux',   href: DL.linux,   ext: 'x64 .AppImage' },
               ].map(p => (
                 <a
                   key={p.ext}

@@ -66,11 +66,13 @@
     },
     "mac": {
       "target": "dmg",
-      "icon": "resources/icon.icns"
+      "icon": "resources/icon.icns",
+      "artifactName": "Tera5G-Browser-${version}-mac.dmg"
     },
     "linux": {
       "target": "AppImage",
-      "icon": "resources/icon.png"
+      "icon": "resources/icon.png",
+      "artifactName": "Tera5G-Browser-${version}-linux.AppImage"
     }
   }
 }

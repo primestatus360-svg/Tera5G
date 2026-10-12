@@ -5,7 +5,7 @@ import { useState } from 'react'
 const VERSION = '1.0.0'
 
 const DL = {
-  windows: `/downloads/Tera5G-Setup-${VERSION}.exe`,
+  windows: `https://github.com/primestatus360-svg/Tera5G/releases/download/v${VERSION}/Tera5G-Browser-win-x64.zip`,
   mac:     `/downloads/Tera5G-${VERSION}.dmg`,
   linux:   `/downloads/Tera5G-${VERSION}.AppImage`,
   android: `/downloads/Tera5G-${VERSION}.apk`,
@@ -598,7 +598,7 @@ function Downloads() {
 
             <div className="space-y-2.5">
               {[
-                { icon: <IcoWindows />, label: 'Download for Windows', href: DL.windows, ext: '.exe' },
+                { icon: <IcoWindows />, label: 'Download for Windows', href: DL.windows, ext: '.zip' },
                 { icon: <IcoApple />,   label: 'Download for macOS',   href: DL.mac,     ext: '.dmg' },
                 { icon: <IcoLinux />,   label: 'Download for Linux',   href: DL.linux,   ext: '.AppImage' },
               ].map(p => (

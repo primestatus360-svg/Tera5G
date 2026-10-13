@@ -294,7 +294,6 @@ fun BrowserScreen(
         // ── WebView ────────────────────────────────────────────────────────────
         AndroidView(
             factory = { ctx ->
-                @SuppressLint("SetJavaScriptEnabled")
                 WebView(ctx).apply {
                     settings.javaScriptEnabled = true
                     settings.domStorageEnabled  = true

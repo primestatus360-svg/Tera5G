@@ -7,7 +7,7 @@ const STEPS = [
     icon: 'lock-closed-outline' as const,
     color: C.blue,
     title: 'TLS Handshake',
-    body: 'Your device opens a TLS connection. The SNI (Server Name Indication) field in the ClientHello is visible in plaintext — this is what firewalls read to decide whether to allow the connection.',
+    body: 'Your device opens a TLS connection. The SNI field in the ClientHello is visible in plaintext — this is what firewalls read to decide whether to allow the connection.',
   },
   {
     icon: 'eye-outline' as const,
@@ -17,7 +17,7 @@ const STEPS = [
   },
   {
     icon: 'swap-horizontal-outline' as const,
-    color: C.blue,
+    color: C.purple,
     title: 'Domain Fronting',
     body: 'Once the TLS tunnel is open, the HTTP Host header inside points to a different destination — the blocked site. The firewall sees an allowed SNI but traffic reaches the blocked server.',
   },
@@ -36,32 +36,45 @@ const STEPS = [
 ]
 
 const JA3_FIELDS = [
-  { label: 'TLS Version', value: '772 (TLS 1.3)' },
-  { label: 'Cipher Suites', value: '4866-4867-4865-…' },
-  { label: 'Extensions', value: '0-23-10-11-35-…' },
-  { label: 'Elliptic Curves', value: '29-23-24' },
+  { label: 'TLS Version',      value: '772 (TLS 1.3)' },
+  { label: 'Cipher Suites',    value: '4866-4867-4865-…' },
+  { label: 'Extensions',       value: '0-23-10-11-35-…' },
+  { label: 'Elliptic Curves',  value: '29-23-24' },
   { label: 'EC Point Formats', value: '0' },
 ]
 
 const FLOW_NODES = [
-  { label: 'Your Device', color: C.blue, sub: 'SNI = allowed.com' },
-  { label: 'Firewall', color: C.yellow, sub: 'Reads SNI only' },
-  { label: 'CDN Edge', color: C.sub, sub: 'Forwards Host header' },
-  { label: 'Blocked Site', color: C.red, sub: 'Actual destination' },
+  { label: 'Your Device', color: C.blue,   sub: 'SNI = allowed.com',     icon: 'phone-portrait-outline' as const },
+  { label: 'Firewall',    color: C.yellow,  sub: 'Reads SNI only',        icon: 'shield-outline'         as const },
+  { label: 'CDN Edge',    color: C.purple,  sub: 'Forwards Host header',  icon: 'cloud-outline'          as const },
+  { label: 'Blocked Site',color: C.red,     sub: 'Actual destination',    icon: 'globe-outline'          as const },
 ]
 
 export default function HowTo() {
   return (
-    <ScrollView style={styles.scroll} contentContainerStyle={styles.container}>
-      <Text style={styles.pageTitle}>How Domain Fronting Works</Text>
-      <Text style={styles.pageSubtitle}>
-        A firewall bypass technique that exploits the gap between TLS metadata and the encrypted HTTP payload.
-      </Text>
+    <ScrollView
+      style={styles.scroll}
+      contentContainerStyle={styles.container}
+      showsVerticalScrollIndicator={false}
+    >
+      {/* Page header */}
+      <View style={styles.pageHeader}>
+        <Text style={styles.pageTitle}>How Domain Fronting Works</Text>
+        <Text style={styles.pageSubtitle}>
+          A firewall bypass technique that exploits the gap between TLS metadata and the encrypted HTTP payload.
+        </Text>
+      </View>
 
-      {STEPS.map(step => (
+      {/* Steps */}
+      {STEPS.map((step, i) => (
         <View key={step.title} style={styles.stepCard}>
-          <View style={iconBox(step.color)}>
-            <Ionicons name={step.icon} size={17} color={step.color} />
+          <View style={styles.stepHeader}>
+            <View style={iconBox(step.color)}>
+              <Ionicons name={step.icon} size={18} color={step.color} />
+            </View>
+            <View style={[styles.stepNumBadge, { backgroundColor: step.color + '15', borderColor: step.color + '30' }]}>
+              <Text style={[styles.stepNum, { color: step.color }]}>Step {i + 1}</Text>
+            </View>
           </View>
           <Text style={styles.stepTitle}>{step.title}</Text>
           <Text style={styles.stepBody}>{step.body}</Text>
@@ -70,13 +83,19 @@ export default function HowTo() {
 
       {/* JA3 breakdown */}
       <View style={styles.section}>
-        <Text style={styles.sectionLabel}>JA3 Fingerprint Anatomy</Text>
+        <View style={styles.sectionHeader}>
+          <Ionicons name="code-outline" size={14} color={C.cyan} />
+          <Text style={styles.sectionLabel}>JA3 Fingerprint Anatomy</Text>
+        </View>
         <Text style={styles.sectionDesc}>
           JA3 = MD5(TLSVersion, Ciphers, Extensions, EllipticCurves, ECPointFormats)
         </Text>
         <View style={styles.table}>
           {JA3_FIELDS.map((f, idx) => (
-            <View key={f.label} style={[styles.tableRow, idx < JA3_FIELDS.length - 1 && styles.tableRowBorder]}>
+            <View
+              key={f.label}
+              style={[styles.tableRow, idx < JA3_FIELDS.length - 1 && styles.tableRowBorder]}
+            >
               <Text style={styles.tableLabel}>{f.label}</Text>
               <Text style={styles.tableValue}>{f.value}</Text>
             </View>
@@ -89,16 +108,25 @@ export default function HowTo() {
 
       {/* Traffic flow */}
       <View style={styles.section}>
-        <Text style={styles.sectionLabel}>Attack Traffic Flow</Text>
+        <View style={styles.sectionHeader}>
+          <Ionicons name="git-branch-outline" size={14} color={C.purple} />
+          <Text style={styles.sectionLabel}>Attack Traffic Flow</Text>
+        </View>
         <View style={styles.flow}>
           {FLOW_NODES.map((node, i) => (
-            <View key={node.label} style={styles.flowRow}>
-              <View style={[styles.flowNode, { borderColor: node.color + '60', backgroundColor: node.color + '10' }]}>
-                <Text style={[styles.flowNodeText, { color: node.color }]}>{node.label}</Text>
-                <Text style={styles.flowNodeSub}>{node.sub}</Text>
+            <View key={node.label} style={styles.flowItem}>
+              <View style={[styles.flowNode, { borderColor: node.color + '45', backgroundColor: node.color + '0e' }]}>
+                <Ionicons name={node.icon} size={15} color={node.color} />
+                <View>
+                  <Text style={[styles.flowNodeText, { color: node.color }]}>{node.label}</Text>
+                  <Text style={styles.flowNodeSub}>{node.sub}</Text>
+                </View>
               </View>
               {i < FLOW_NODES.length - 1 && (
-                <Ionicons name="arrow-down-outline" size={16} color={C.muted} style={{ marginVertical: 4 }} />
+                <View style={styles.flowArrow}>
+                  <View style={[styles.flowLine, { backgroundColor: FLOW_NODES[i + 1].color + '40' }]} />
+                  <Ionicons name="chevron-down" size={14} color={C.muted} />
+                </View>
               )}
             </View>
           ))}
@@ -107,6 +135,7 @@ export default function HowTo() {
 
       {/* Footer */}
       <View style={styles.footer}>
+        <Ionicons name="information-circle-outline" size={14} color={C.muted} />
         <Text style={styles.footerText}>
           Technique: Domain Fronting · Protocol: TCP/443{'\n'}
           Detection: JA3 fingerprinting + SNI/Host correlation
@@ -118,35 +147,47 @@ export default function HowTo() {
 
 const styles = StyleSheet.create({
   scroll: { flex: 1, backgroundColor: C.bg },
-  container: { padding: S.md, gap: 12, paddingBottom: 40 },
+  container: { padding: S.md, gap: 12, paddingBottom: 48 },
 
+  pageHeader: {
+    backgroundColor: C.surface,
+    borderWidth: 1, borderColor: C.border,
+    borderRadius: R.card, padding: 20, gap: 8, marginBottom: 4,
+  },
   pageTitle: {
-    fontSize: 22, fontWeight: '700', color: C.text,
+    fontSize: 20, fontWeight: '800', color: C.text,
     letterSpacing: -0.5, fontFamily: F,
   },
   pageSubtitle: {
-    fontSize: 14, color: C.sub, lineHeight: 21,
-    fontFamily: F,
+    fontSize: 13.5, color: C.sub, lineHeight: 21, fontFamily: F,
   },
 
   stepCard: {
-    backgroundColor: C.surface, borderWidth: 0.5, borderColor: C.border,
-    borderRadius: R.card, padding: 18,
+    backgroundColor: C.surface,
+    borderWidth: 1, borderColor: C.border,
+    borderRadius: R.card, padding: 18, gap: 6,
   },
+  stepHeader: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' },
+  stepNumBadge: {
+    borderWidth: 1, borderRadius: R.badge,
+    paddingHorizontal: 9, paddingVertical: 3,
+    alignSelf: 'flex-start',
+  },
+  stepNum: { fontSize: 10, fontWeight: '700', fontFamily: F },
   stepTitle: {
-    fontSize: 15, fontWeight: '600', color: C.text,
-    marginBottom: 6, fontFamily: F,
+    fontSize: 15, fontWeight: '700', color: C.text,
+    letterSpacing: -0.2, fontFamily: F,
   },
   stepBody: { fontSize: 13, color: C.sub, lineHeight: 20, fontFamily: F },
 
   section: {
-    backgroundColor: C.surface, borderWidth: 0.5, borderColor: C.border,
+    backgroundColor: C.surface,
+    borderWidth: 1, borderColor: C.border,
     borderRadius: R.card, padding: 18, gap: 12,
   },
-  sectionLabel: {
-    fontSize: 14, fontWeight: '600', color: C.text, fontFamily: F,
-  },
-  sectionDesc: { fontSize: 12, color: C.sub, fontFamily: F },
+  sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: 7 },
+  sectionLabel: { fontSize: 13.5, fontWeight: '700', color: C.text, fontFamily: F },
+  sectionDesc:  { fontSize: 12, color: C.sub, fontFamily: F, lineHeight: 18 },
 
   table: { gap: 0 },
   tableRow: {
@@ -154,25 +195,30 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
   },
   tableRowBorder: {
-    borderBottomWidth: 0.5, borderBottomColor: C.divider,
+    borderBottomWidth: 1, borderBottomColor: C.divider,
   },
   tableLabel: { fontSize: 12, color: C.muted, fontFamily: F },
-  tableValue: { fontSize: 12, color: C.text, fontFamily: F },
+  tableValue: { fontSize: 12, color: C.text, fontFamily: F, fontWeight: '500' },
   tableNote:  { fontSize: 11, color: C.muted, lineHeight: 17, fontFamily: F },
 
-  flow: { alignItems: 'center', gap: 0 },
-  flowRow: { alignItems: 'center' },
+  flow: { gap: 0, alignItems: 'stretch' },
+  flowItem: { alignItems: 'center' },
   flowNode: {
-    borderWidth: 0.5, borderRadius: R.input,
-    paddingHorizontal: 20, paddingVertical: 10,
-    alignItems: 'center', minWidth: 180,
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+    borderWidth: 1, borderRadius: R.input + 2,
+    paddingHorizontal: 16, paddingVertical: 12,
+    alignSelf: 'stretch',
   },
   flowNodeText: { fontSize: 13, fontWeight: '600', fontFamily: F },
-  flowNodeSub: { fontSize: 11, color: C.muted, marginTop: 2, fontFamily: F },
+  flowNodeSub:  { fontSize: 11, color: C.muted, marginTop: 2, fontFamily: F },
+  flowArrow: { alignItems: 'center', gap: 0, paddingVertical: 2 },
+  flowLine: { width: 2, height: 6, borderRadius: 1 },
 
   footer: {
-    backgroundColor: C.surface, borderWidth: 0.5, borderColor: C.border,
+    flexDirection: 'row', alignItems: 'flex-start', gap: 9,
+    backgroundColor: C.surface,
+    borderWidth: 1, borderColor: C.border,
     borderRadius: R.input, padding: 14,
   },
-  footerText: { color: C.muted, fontSize: 12, lineHeight: 18, fontFamily: F },
+  footerText: { color: C.muted, fontSize: 12, lineHeight: 19, fontFamily: F, flex: 1 },
 })

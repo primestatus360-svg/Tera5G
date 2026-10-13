@@ -1,45 +1,53 @@
 import { Platform } from 'react-native'
 
-// ── PS360 Admin palette ──────────────────────────────────────────────────────
+// ── Opera-class palette ──────────────────────────────────────────────────────
 export const C = {
-  bg:       '#000000',
-  surface:  '#1C1C1E',
-  elevated: '#2C2C2E',
-  header:   '#1C1C1E',
+  bg:        '#0b0c18',
+  surface:   '#141628',
+  elevated:  '#1a1c35',
+  header:    '#0e0f1d',
 
-  border:   'rgba(84,84,88,0.65)',
-  divider:  'rgba(84,84,88,0.36)',
+  border:    'rgba(255,255,255,0.08)',
+  divider:   'rgba(255,255,255,0.05)',
 
-  text:     '#FFFFFF',
-  sub:      '#8E8E93',
-  muted:    '#636366',
+  text:      '#e2e5f1',
+  sub:       '#7b82a8',
+  muted:     '#4a4f72',
 
-  green:    '#1DB814',
-  greenBg:  'rgba(29,184,20,0.12)',
-  greenBd:  'rgba(29,184,20,0.28)',
-  greenGlow:'rgba(29,184,20,0.35)',
+  green:     '#1DB814',
+  greenBg:   'rgba(29,184,20,0.10)',
+  greenBd:   'rgba(29,184,20,0.25)',
+  greenGlow: 'rgba(29,184,20,0.35)',
 
-  red:      '#FF453A',
-  redBg:    'rgba(255,69,58,0.12)',
-  redBd:    'rgba(255,69,58,0.28)',
+  red:       '#ef4444',
+  redBg:     'rgba(239,68,68,0.10)',
+  redBd:     'rgba(239,68,68,0.25)',
 
-  blue:     '#0A84FF',
-  blueBg:   'rgba(10,132,255,0.12)',
-  blueBd:   'rgba(10,132,255,0.28)',
+  blue:      '#3b82f6',
+  blueBg:    'rgba(59,130,246,0.10)',
+  blueBd:    'rgba(59,130,246,0.25)',
 
-  yellow:   '#FF9F0A',
-  yellowBg: 'rgba(255,159,10,0.12)',
-  yellowBd: 'rgba(255,159,10,0.30)',
+  yellow:    '#f59e0b',
+  yellowBg:  'rgba(245,158,11,0.10)',
+  yellowBd:  'rgba(245,158,11,0.25)',
+
+  purple:    '#8b5cf6',
+  purpleBg:  'rgba(139,92,246,0.10)',
+  purpleBd:  'rgba(139,92,246,0.25)',
+
+  cyan:      '#06b6d4',
+  cyanBg:    'rgba(6,182,212,0.10)',
+  cyanBd:    'rgba(6,182,212,0.25)',
 } as const
 
 // ── Radii ────────────────────────────────────────────────────────────────────
 export const R = {
-  card:   18,
-  button: 12,
-  chip:   20,
-  input:  10,
-  badge:  20,
-  icon:   10,
+  card:   20,
+  button: 14,
+  chip:   22,
+  input:  12,
+  badge:  22,
+  icon:   12,
   sm:     8,
 } as const
 
@@ -52,27 +60,26 @@ export const S = {
   xl: 32,
 } as const
 
-// ── Font family (iOS SF Pro, Android system sans) ─────────────────────────────
+// ── Font family ──────────────────────────────────────────────────────────────
 export const F = Platform.OS === 'ios' ? 'SF Pro Text' : undefined
 
-// ── Standard card shadow ──────────────────────────────────────────────────────
+// ── Card shadows ─────────────────────────────────────────────────────────────
 export function cardShadow() {
   return Platform.OS === 'ios'
-    ? { shadowColor: '#000', shadowOpacity: 0.08, shadowRadius: 8, shadowOffset: { width: 0, height: 2 } }
-    : { elevation: 2 }
-}
-
-// ── Colored glow shadow ───────────────────────────────────────────────────────
-export function glowShadow(color: string) {
-  return Platform.OS === 'ios'
-    ? { shadowColor: color, shadowOpacity: 0.35, shadowRadius: 16, shadowOffset: { width: 0, height: 0 } }
+    ? { shadowColor: '#000', shadowOpacity: 0.4, shadowRadius: 16, shadowOffset: { width: 0, height: 4 } }
     : { elevation: 6 }
 }
 
-// ── Surface card ──────────────────────────────────────────────────────────────
+export function glowShadow(color: string) {
+  return Platform.OS === 'ios'
+    ? { shadowColor: color, shadowOpacity: 0.45, shadowRadius: 20, shadowOffset: { width: 0, height: 0 } }
+    : { elevation: 8 }
+}
+
+// ── Reusable style objects ────────────────────────────────────────────────────
 export const surfaceCard = {
   backgroundColor: C.surface,
-  borderWidth: 0.5,
+  borderWidth: 1,
   borderColor: C.border,
   borderRadius: R.card,
   padding: 18,
@@ -88,13 +95,14 @@ export const surfaceCardDanger = {
   borderColor: `${C.red}40`,
 }
 
-// ── Stat card icon container ──────────────────────────────────────────────────
 export function iconBox(accentColor: string) {
   return {
-    width: 36,
-    height: 36,
+    width: 40,
+    height: 40,
     borderRadius: R.icon,
     backgroundColor: accentColor + '18',
+    borderWidth: 1,
+    borderColor: accentColor + '30',
     alignItems: 'center' as const,
     justifyContent: 'center' as const,
     marginBottom: 14,

@@ -5,12 +5,16 @@ import { C, F } from '../constants/theme'
 export default function RootLayout() {
   return (
     <>
-      <StatusBar style="light" backgroundColor={C.header} />
+      <StatusBar style="light" backgroundColor={C.header} translucent={false} />
       <Stack
         screenOptions={{
           headerStyle: { backgroundColor: C.header },
           headerTintColor: C.text,
-          headerTitleStyle: { fontFamily: F, fontWeight: '600', fontSize: 17 },
+          headerTitleStyle: {
+            fontFamily: F,
+            fontWeight: '700',
+            fontSize: 16,
+          },
           headerShadowVisible: false,
           contentStyle: { backgroundColor: C.bg },
         }}

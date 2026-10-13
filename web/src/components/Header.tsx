@@ -1,6 +1,7 @@
 import {
-  Wifi, WifiOff, ShieldCheck, ShieldAlert, Radio, Trophy, Info,
-  LayoutDashboard, Monitor, Plug, Users, Ticket, Search, CreditCard, X,
+  Wifi, WifiOff, ShieldCheck, ShieldAlert, Radio, Trophy,
+  LayoutDashboard, Monitor, Plug, Users, Ticket, Search,
+  CreditCard, X, Activity, Zap,
 } from 'lucide-react'
 import { FirewallMode } from '../types'
 import { Section } from '../App'
@@ -15,172 +16,236 @@ interface Props {
   onClose?: () => void
 }
 
-const NAV_GROUPS: { label: string; items: { icon: React.ElementType; label: string; section: Section; accent?: string }[] }[] = [
+const NAV_GROUPS: {
+  label: string
+  items: { icon: React.ElementType; label: string; section: Section; accent: string }[]
+}[] = [
   {
     label: 'Control',
     items: [
-      { icon: Monitor,         label: 'Browsers',    section: 'browsers',    accent: '#0A84FF' },
-      { icon: LayoutDashboard, label: 'Dashboard',   section: 'dashboard'   },
+      { icon: Monitor,         label: 'Browsers',    section: 'browsers',    accent: '#3b82f6' },
+      { icon: LayoutDashboard, label: 'Dashboard',   section: 'dashboard',   accent: '#8b5cf6' },
     ],
   },
   {
     label: 'Monitor',
     items: [
-      { icon: Plug,            label: 'Connections', section: 'connections', accent: '#BF5AF2' },
-      { icon: Radio,           label: 'Traffic',     section: 'traffic'     },
-      { icon: Trophy,          label: 'Leaderboard', section: 'leaderboard' },
+      { icon: Plug,            label: 'Connections', section: 'connections', accent: '#a78bfa' },
+      { icon: Radio,           label: 'Traffic',     section: 'traffic',     accent: '#06b6d4' },
+      { icon: Trophy,          label: 'Leaderboard', section: 'leaderboard', accent: '#f59e0b' },
     ],
   },
   {
     label: 'Manage',
     items: [
-      { icon: Users,           label: 'Users',       section: 'users',      accent: '#1DB814' },
-      { icon: Ticket,          label: 'Vouchers',    section: 'vouchers',   accent: '#FF9F0A' },
-      { icon: CreditCard,      label: 'Payments',    section: 'payments',   accent: '#30D158' },
-      { icon: Search,          label: 'Search',      section: 'search'      },
+      { icon: Users,           label: 'Users',       section: 'users',       accent: '#1DB814' },
+      { icon: Ticket,          label: 'Vouchers',    section: 'vouchers',    accent: '#f97316' },
+      { icon: CreditCard,      label: 'Payments',    section: 'payments',    accent: '#10b981' },
+      { icon: Search,          label: 'Search',      section: 'search',      accent: '#64748b' },
     ],
   },
   {
     label: 'Security',
     items: [
-      { icon: ShieldAlert,     label: 'Firewall',    section: 'firewall'    },
-      { icon: Info,            label: 'JA3',         section: 'ja3'         },
+      { icon: ShieldAlert,     label: 'Firewall',    section: 'firewall',    accent: '#ef4444' },
+      { icon: Activity,        label: 'JA3',         section: 'ja3',         accent: '#ec4899' },
     ],
   },
 ]
 
-export function Sidebar({ firewallMode, connected, activeSessions, onlineBrowsers, activeSection, onNavigate, onClose }: Props) {
+export function Sidebar({
+  firewallMode, connected, activeSessions, onlineBrowsers,
+  activeSection, onNavigate, onClose,
+}: Props) {
   const isVulnerable = firewallMode === 'vulnerable'
 
   return (
     <aside
-      className="flex flex-col flex-shrink-0 overflow-hidden overflow-y-auto"
       style={{
-        width: 220,
-        backgroundColor: '#1C1C1E',
-        borderRight: '0.5px solid rgba(84,84,88,0.50)',
+        width: 228,
+        flexShrink: 0,
         height: '100%',
+        display: 'flex',
+        flexDirection: 'column',
+        overflow: 'hidden',
+        backgroundColor: '#0e0f1d',
+        borderRight: '1px solid rgba(255,255,255,0.07)',
+        position: 'relative',
       }}
     >
-      {/* Brand */}
+      {/* Subtle gradient overlay */}
+      <div style={{
+        position: 'absolute', inset: 0, pointerEvents: 'none',
+        background: 'radial-gradient(ellipse 200% 60% at 50% 0%, rgba(59,130,246,0.06) 0%, transparent 60%)',
+      }} />
+
+      {/* ── Brand ── */}
       <div style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        paddingInline: 18, paddingTop: 20, paddingBottom: 14,
-        borderBottom: '0.5px solid rgba(84,84,88,0.50)', flexShrink: 0,
+        padding: '20px 18px 16px',
+        borderBottom: '1px solid rgba(255,255,255,0.06)',
+        flexShrink: 0, position: 'relative',
       }}>
-        <div>
-          <span className="text-xl font-bold text-tera-text tracking-tight leading-none">
-            Tera<span className="text-tera-green">5G</span>
-          </span>
-          <div className="text-xs text-tera-muted mt-1">Admin Console</div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          {/* Logo mark */}
+          <div style={{
+            width: 34, height: 34, borderRadius: 10, flexShrink: 0,
+            background: 'linear-gradient(135deg, #1DB814 0%, #0ea5e9 100%)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            boxShadow: '0 4px 12px rgba(29,184,20,0.35)',
+          }}>
+            <Zap size={16} color="#fff" fill="#fff" />
+          </div>
+          <div>
+            <div style={{
+              fontSize: 15, fontWeight: 800, lineHeight: 1,
+              background: 'linear-gradient(90deg, #e2e5f1 0%, #94a3b8 100%)',
+              WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
+              letterSpacing: '-0.02em',
+            }}>
+              Tera<span style={{
+                background: 'linear-gradient(90deg, #1DB814, #0ea5e9)',
+                WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
+              }}>5G</span>
+            </div>
+            <div style={{ fontSize: 10, color: '#4a4f72', marginTop: 2, fontWeight: 500, letterSpacing: '0.04em' }}>
+              Admin Console
+            </div>
+          </div>
         </div>
         {onClose && (
           <button
             onClick={onClose}
             style={{
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              width: 28, height: 28, borderRadius: 7, cursor: 'pointer',
-              background: 'rgba(84,84,88,0.18)', border: '0.5px solid rgba(84,84,88,0.36)',
+              width: 28, height: 28, borderRadius: 8, cursor: 'pointer',
+              background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.08)',
             }}
           >
-            <X size={14} color="#8E8E93" />
+            <X size={13} color="#7b82a8" />
           </button>
         )}
       </div>
 
-      {/* Status */}
+      {/* ── Status cards ── */}
       <div style={{ padding: '12px 12px 6px', flexShrink: 0 }}>
+        {/* Firewall status */}
         <div style={{
-          display: 'flex', alignItems: 'center', gap: 8, borderRadius: 10,
-          padding: '8px 10px', marginBottom: 8,
-          backgroundColor: isVulnerable ? 'rgba(255,69,58,0.10)' : 'rgba(29,184,20,0.10)',
-          border: `0.5px solid ${isVulnerable ? 'rgba(255,69,58,0.35)' : 'rgba(29,184,20,0.35)'}`,
+          display: 'flex', alignItems: 'center', gap: 9,
+          borderRadius: 10, padding: '9px 11px', marginBottom: 8,
+          background: isVulnerable
+            ? 'rgba(239,68,68,0.08)'
+            : 'rgba(29,184,20,0.08)',
+          border: `1px solid ${isVulnerable
+            ? 'rgba(239,68,68,0.22)'
+            : 'rgba(29,184,20,0.22)'}`,
         }}>
           {isVulnerable
-            ? <ShieldAlert size={13} className="text-tera-red flex-shrink-0" />
-            : <ShieldCheck size={13} className="text-tera-green flex-shrink-0" />
+            ? <ShieldAlert size={13} color="#ef4444" style={{ flexShrink: 0 }} />
+            : <ShieldCheck size={13} color="#1DB814" style={{ flexShrink: 0 }} />
           }
-          <div className="min-w-0">
-            <div className={`text-xs font-semibold ${isVulnerable ? 'text-tera-red' : 'text-tera-green'}`}>
+          <div>
+            <div style={{
+              fontSize: 11, fontWeight: 700,
+              color: isVulnerable ? '#ef4444' : '#1DB814',
+              letterSpacing: '0.01em',
+            }}>
               {isVulnerable ? 'Bypass Active' : 'Firewall Patched'}
+            </div>
+            <div style={{ fontSize: 9.5, color: '#4a4f72', marginTop: 1 }}>
+              {isVulnerable ? 'Domain fronting open' : 'JA3 + SNI correlation on'}
             </div>
           </div>
         </div>
 
+        {/* Stats mini-grid */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 5 }}>
-          <div style={{
-            display: 'flex', flexDirection: 'column', alignItems: 'center',
-            background: 'rgba(84,84,88,0.12)', border: '0.5px solid rgba(84,84,88,0.36)',
-            borderRadius: 8, padding: '6px 4px',
-          }}>
-            <span style={{ fontSize: 13, fontWeight: 800, color: '#fff', lineHeight: 1 }}>{activeSessions}</span>
-            <span style={{ fontSize: 9, color: '#636366', marginTop: 2 }}>relaying</span>
-          </div>
-          <div style={{
-            display: 'flex', flexDirection: 'column', alignItems: 'center',
-            background: onlineBrowsers > 0 ? 'rgba(10,132,255,0.08)' : 'rgba(84,84,88,0.12)',
-            border: `0.5px solid ${onlineBrowsers > 0 ? 'rgba(10,132,255,0.36)' : 'rgba(84,84,88,0.36)'}`,
-            borderRadius: 8, padding: '6px 4px',
-          }}>
-            <span style={{ fontSize: 13, fontWeight: 800, lineHeight: 1, color: onlineBrowsers > 0 ? '#0A84FF' : '#636366' }}>
-              {onlineBrowsers}
-            </span>
-            <span style={{ fontSize: 9, color: '#636366', marginTop: 2 }}>browsers</span>
-          </div>
-          <div style={{
-            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 3,
-            background: 'rgba(84,84,88,0.12)', border: '0.5px solid rgba(84,84,88,0.36)',
-            borderRadius: 8, padding: '6px 4px',
-          }}>
-            {connected
-              ? <Wifi size={10} className="text-tera-green" />
-              : <WifiOff size={10} className="text-tera-red" />
-            }
-            <span style={{ fontSize: 9, fontWeight: 600, color: connected ? '#1DB814' : '#FF453A' }}>
-              {connected ? 'Live' : 'Off'}
-            </span>
-          </div>
+          {[
+            { value: activeSessions, label: 'relaying', accent: '#06b6d4', glow: onlineBrowsers > 0 },
+            { value: onlineBrowsers, label: 'browsers', accent: '#3b82f6', glow: onlineBrowsers > 0 },
+            { value: null, label: connected ? 'Live' : 'Off', accent: connected ? '#1DB814' : '#ef4444', isConn: true },
+          ].map((stat, i) => (
+            <div key={i} style={{
+              display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+              background: stat.glow ? `${stat.accent}10` : 'rgba(255,255,255,0.04)',
+              border: `1px solid ${stat.glow ? `${stat.accent}28` : 'rgba(255,255,255,0.06)'}`,
+              borderRadius: 8, padding: '7px 4px',
+              transition: 'background 0.2s, border-color 0.2s',
+            }}>
+              {stat.isConn ? (
+                <>
+                  {connected
+                    ? <Wifi size={11} color="#1DB814" />
+                    : <WifiOff size={11} color="#ef4444" />
+                  }
+                  <span style={{ fontSize: 9, fontWeight: 700, color: stat.accent, marginTop: 2 }}>
+                    {stat.label}
+                  </span>
+                </>
+              ) : (
+                <>
+                  <span style={{ fontSize: 14, fontWeight: 800, color: stat.glow ? stat.accent : '#7b82a8', lineHeight: 1 }}>
+                    {stat.value}
+                  </span>
+                  <span style={{ fontSize: 9, color: '#4a4f72', marginTop: 2 }}>{stat.label}</span>
+                </>
+              )}
+            </div>
+          ))}
         </div>
       </div>
 
-      {/* Nav groups */}
-      <nav style={{ flex: 1, padding: '4px 8px 8px', overflowY: 'auto' }}>
+      {/* ── Navigation ── */}
+      <nav style={{ flex: 1, padding: '6px 8px 8px', overflowY: 'auto', position: 'relative' }}>
         {NAV_GROUPS.map(group => (
-          <div key={group.label} style={{ marginBottom: 4 }}>
+          <div key={group.label} style={{ marginBottom: 6 }}>
             <div style={{
-              fontSize: 9, fontWeight: 700, color: '#48484A',
-              textTransform: 'uppercase', letterSpacing: '0.10em',
-              paddingInline: 10, paddingBlock: '8px 4px',
-            }}>{group.label}</div>
-
+              fontSize: 9.5, fontWeight: 700, color: '#363a56',
+              textTransform: 'uppercase', letterSpacing: '0.12em',
+              padding: '8px 12px 4px',
+            }}>
+              {group.label}
+            </div>
             {group.items.map(item => {
               const Icon = item.icon
               const active = activeSection === item.section
-              const accent = item.accent ?? '#FFFFFF'
               return (
                 <button
                   key={item.section}
                   onClick={() => onNavigate(item.section)}
+                  className="nav-item"
                   style={{
-                    width: '100%', display: 'flex', alignItems: 'center', gap: 10,
-                    borderRadius: 8, padding: '8px 10px', marginBottom: 1,
-                    backgroundColor: active ? `${accent}1A` : 'transparent',
-                    border: active ? `0.5px solid ${accent}40` : '0.5px solid transparent',
-                    cursor: 'pointer', outline: 'none', textAlign: 'left',
-                    transition: 'background 0.12s',
+                    background: active ? `${item.accent}14` : undefined,
+                    borderColor: active ? `${item.accent}28` : undefined,
                   }}
                   onMouseEnter={e => {
-                    if (!active) (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'rgba(255,255,255,0.04)'
+                    if (!active) (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.05)'
                   }}
                   onMouseLeave={e => {
-                    if (!active) (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'transparent'
+                    if (!active) (e.currentTarget as HTMLElement).style.background = ''
                   }}
                 >
-                  <Icon size={15} style={{ color: active ? accent : '#636366', flexShrink: 0 }} />
+                  {/* Active indicator */}
+                  <div
+                    className="nav-indicator"
+                    style={{ background: item.accent, opacity: active ? 1 : 0 }}
+                  />
+                  <div style={{
+                    width: 30, height: 30, borderRadius: 8, flexShrink: 0,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    background: active ? `${item.accent}20` : 'rgba(255,255,255,0.04)',
+                    border: `1px solid ${active ? `${item.accent}30` : 'rgba(255,255,255,0.05)'}`,
+                    transition: 'background 0.15s, border-color 0.15s',
+                  }}>
+                    <Icon size={14} color={active ? item.accent : '#4a4f72'} style={{ flexShrink: 0 }} />
+                  </div>
                   <span style={{
-                    fontSize: 13, color: active ? accent : '#8E8E93',
+                    fontSize: 12.5, color: active ? item.accent : '#7b82a8',
                     fontWeight: active ? 600 : 400,
-                  }}>{item.label}</span>
+                    transition: 'color 0.12s',
+                  }}>
+                    {item.label}
+                  </span>
                 </button>
               )
             })}
@@ -188,26 +253,37 @@ export function Sidebar({ firewallMode, connected, activeSessions, onlineBrowser
         ))}
       </nav>
 
-      {/* Footer */}
+      {/* ── Footer ── */}
       <div style={{
-        paddingInline: 12, paddingBlock: 12,
-        borderTop: '0.5px solid rgba(84,84,88,0.50)', flexShrink: 0,
+        padding: '10px 12px 14px',
+        borderTop: '1px solid rgba(255,255,255,0.06)',
+        flexShrink: 0, position: 'relative',
       }}>
         <div style={{
-          display: 'flex', alignItems: 'center', gap: 8, borderRadius: 8,
-          padding: '7px 10px', background: 'rgba(29,184,20,0.08)',
+          display: 'flex', alignItems: 'center', gap: 10,
+          background: 'rgba(255,255,255,0.04)',
+          border: '1px solid rgba(255,255,255,0.06)',
+          borderRadius: 10, padding: '8px 10px',
         }}>
           <div style={{
-            width: 24, height: 24, borderRadius: 6, flexShrink: 0,
+            width: 28, height: 28, borderRadius: 8, flexShrink: 0,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            background: 'rgba(29,184,20,0.18)',
+            background: 'linear-gradient(135deg, rgba(29,184,20,0.2), rgba(59,130,246,0.2))',
+            border: '1px solid rgba(29,184,20,0.2)',
           }}>
-            <ShieldCheck size={12} className="text-tera-green" />
+            <ShieldCheck size={13} color="#1DB814" />
           </div>
-          <div>
-            <div style={{ fontSize: 12, fontWeight: 600, color: '#fff' }}>Admin</div>
-            <div style={{ fontSize: 10, color: '#636366' }}>Master Console</div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 11.5, fontWeight: 600, color: '#e2e5f1' }}>Admin</div>
+            <div style={{ fontSize: 10, color: '#4a4f72' }}>Master Console</div>
           </div>
+          <div style={{
+            width: 7, height: 7, borderRadius: '50%',
+            background: connected ? '#1DB814' : '#ef4444',
+            boxShadow: connected ? '0 0 6px #1DB814' : 'none',
+            flexShrink: 0,
+            animation: connected ? 'glowPulse 2s ease-in-out infinite' : 'none',
+          }} />
         </div>
       </div>
     </aside>

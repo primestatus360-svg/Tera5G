@@ -27,13 +27,17 @@ jobs:
         with:
           gradle-version: '8.4'
 
-      - name: Make gradlew executable (if present)
-        working-directory: android
-        run: chmod +x gradlew 2>/dev/null || true
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android platform
+        run: sdkmanager "platforms;android-34" "build-tools;34.0.0" --sdk_root=$ANDROID_SDK_ROOT
 
       - name: Build debug APK
         working-directory: android
-        run: gradle assembleDebug
+        run: gradle assembleDebug --stacktrace
+        env:
+          ANDROID_HOME: ${{ env.ANDROID_HOME }}
 
       - name: Rename APK
         run: mv android/app/build/outputs/apk/debug/app-debug.apk android/app/build/outputs/apk/debug/Tera5G-1.0.0.apk

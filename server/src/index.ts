@@ -8,7 +8,7 @@ import { URL } from 'url'
 import path from 'path'
 import fs from 'fs'
 import net from 'net'
-import { WebSocketServer } from 'ws'
+import { WebSocketServer, WebSocket as NodeWebSocket } from 'ws'
 import { store } from './store'
 import { tickActiveRelayers, awardFirstRelay, awardRelayRequest } from './scoring'
 import { startProxyServer } from './proxy'
@@ -274,19 +274,28 @@ h1{color:#ff4444;margin:0 0 16px}p{color:#8090b0;font-size:13px;line-height:1.6}
   proxyReq.end()
 })
 
+// ── Health / connectivity probe ───────────────────────────────────────────────
+//  Unauthenticated.  Android and Electron use this to verify the relay is
+//  reachable before showing the browser UI.  No session required so devices
+//  with no data bundle (but Cloudflare access) can confirm the relay is up.
+// ──────────────────────────────────────────────────────────────────────────────
+
+app.get('/api/ping', (_req, res) => {
+  res.json({ ok: true, ts: Date.now(), mode: store.firewallMode })
+})
+
 // ── Production relay — /api/browse (session-based, no CTF scoring) ────────────
 //
-//  Used by the embedded local proxy in the Electron browser.
-//  All browser tab HTTPS traffic goes via WebSocket /ws/tunnel (see below).
-//  HTTP traffic (rare) goes through this endpoint.
+//  Used by the Android WebView (via shouldInterceptRequest) and the Electron
+//  browser local proxy.  tera5g.world sits behind Cloudflare so the carrier
+//  sees only Cloudflare SNI — no domain fronting detection possible.
 // ──────────────────────────────────────────────────────────────────────────────
 
 app.all('/api/browse', (req, res) => {
   const { url, sessionId } = req.query as { url?: string; sessionId?: string }
 
-  if (!url || !sessionId) {
-    return res.status(400).json({ error: 'url and sessionId required' })
-  }
+  if (!url) return res.status(400).json({ error: 'url required' })
+  if (sessionId === undefined) return res.status(400).json({ error: 'sessionId required' })
 
   const sess = sessions.get(sessionId)
   if (!sess || sess.status !== 'active' || sess.expiresAt < Date.now()) {
@@ -335,15 +344,45 @@ h2{color:#ff4444;margin:0 0 12px}p{color:#8090b0;font-size:13px}</style></head>
       }
     }
 
+    // Strip headers that break embedding / cause double-decode issues
     delete proxyRes.headers['x-frame-options']
     delete proxyRes.headers['content-security-policy']
     delete proxyRes.headers['content-security-policy-report-only']
+    delete proxyRes.headers['content-encoding']   // we requested identity; belt-and-braces
+    delete proxyRes.headers['strict-transport-security']
 
-    res.status(proxyRes.statusCode ?? 200)
-    for (const [k, v] of Object.entries(proxyRes.headers)) {
-      if (v) res.setHeader(k, v as string | string[])
+    const ct = (proxyRes.headers['content-type'] ?? '') as string
+
+    if (ct.includes('text/html')) {
+      // Read body, inject <base> tag so relative URLs resolve correctly in both
+      // Electron (proxied from 127.0.0.1:8080) and Android WebView.
+      let body = ''
+      proxyRes.setEncoding('utf8')
+      proxyRes.on('data', chunk => { body += chunk })
+      proxyRes.on('end', () => {
+        const baseTag = `<base href="${targetUrl.origin}/">`
+        let patched = body
+        if (body.includes('<head>'))      patched = body.replace('<head>',      `<head>${baseTag}`)
+        else if (body.includes('<HEAD>')) patched = body.replace('<HEAD>',      `<HEAD>${baseTag}`)
+        else                              patched = baseTag + body
+
+        res.status(proxyRes.statusCode ?? 200)
+        for (const [k, v] of Object.entries(proxyRes.headers)) {
+          if (v && k !== 'content-length' && k !== 'transfer-encoding') res.setHeader(k, v as string | string[])
+        }
+        res.setHeader('Content-Type', 'text/html; charset=utf-8')
+        res.setHeader('X-Tera5G-Relay', 'cloudflare')
+        res.send(patched)
+      })
+    } else {
+      // Binary / JSON / CSS / JS — pipe directly
+      res.status(proxyRes.statusCode ?? 200)
+      for (const [k, v] of Object.entries(proxyRes.headers)) {
+        if (v && k !== 'transfer-encoding') res.setHeader(k, v as string | string[])
+      }
+      res.setHeader('X-Tera5G-Relay', 'cloudflare')
+      proxyRes.pipe(res, { end: true })
     }
-    proxyRes.pipe(res, { end: true })
   })
 
   proxyReq.on('timeout', () => { proxyReq.destroy(); if (!res.headersSent) res.status(504).json({ error: 'Timeout' }) })
@@ -738,37 +777,101 @@ const wss = new WebSocketServer({ noServer: true })
 
 httpServer.on('upgrade', (req, socket, head) => {
   const reqUrl = new URL(req.url!, 'http://localhost')
-  if (reqUrl.pathname !== '/ws/tunnel') return  // let socket.io handle its own upgrades
 
-  const sessionId = reqUrl.searchParams.get('sessionId') ?? ''
-  const sess      = sessions.get(sessionId)
+  // ── /ws/tunnel — raw TCP relay (used by Electron local proxy for HTTPS CONNECT) ──
+  if (reqUrl.pathname === '/ws/tunnel') {
+    const sessionId = reqUrl.searchParams.get('sessionId') ?? ''
+    const sess      = sessions.get(sessionId)
 
-  if (!sess || sess.status !== 'active' || sess.expiresAt < Date.now()) {
-    socket.write('HTTP/1.1 401 Unauthorized\r\n\r\n')
-    socket.destroy()
+    if (!sess || sess.status !== 'active' || sess.expiresAt < Date.now()) {
+      socket.write('HTTP/1.1 401 Unauthorized\r\n\r\n')
+      socket.destroy()
+      return
+    }
+
+    const host = reqUrl.searchParams.get('host') ?? ''
+    const port = parseInt(reqUrl.searchParams.get('port') ?? '443', 10)
+
+    wss.handleUpgrade(req, socket, head, ws => {
+      const target = net.createConnection(port, host)
+
+      target.on('connect', () => {
+        ws.on('message', data => { target.write(data as Buffer) })
+        target.on('data',  data => { if (ws.readyState === 1) ws.send(data) })
+        target.on('end',   () => ws.close())
+        target.on('error', () => ws.close())
+        ws.on('close', () => target.destroy())
+        ws.on('error', () => target.destroy())
+      })
+
+      target.on('error', err => {
+        console.error(`[tunnel] ${host}:${port} —`, err.message)
+        if (ws.readyState <= 1) ws.close()
+      })
+    })
     return
   }
 
-  const host = reqUrl.searchParams.get('host') ?? ''
-  const port = parseInt(reqUrl.searchParams.get('port') ?? '443', 10)
+  // ── /ws/proxy — WebSocket-to-WebSocket relay (used by Android browser) ────────
+  //
+  //  The Android page JS has window.WebSocket patched to redirect connections to:
+  //    wss://tera5g.world/ws/proxy?url=<original-ws-url>&sessionId=<sid>
+  //  This server-side endpoint opens a real WebSocket to the original target
+  //  and relays frames bidirectionally — fully transparent to the page script.
+  //  Because the device only connects to tera5g.world (Cloudflare-fronted), the
+  //  carrier sees no trace of the real WebSocket target.
+  // ──────────────────────────────────────────────────────────────────────────────
+  if (reqUrl.pathname === '/ws/proxy') {
+    const sessionId = reqUrl.searchParams.get('sessionId') ?? ''
+    const sess      = sessions.get(sessionId)
 
-  wss.handleUpgrade(req, socket, head, ws => {
-    const target = net.createConnection(port, host)
+    if (!sess || sess.status !== 'active' || sess.expiresAt < Date.now()) {
+      socket.write('HTTP/1.1 401 Unauthorized\r\n\r\n')
+      socket.destroy()
+      return
+    }
 
-    target.on('connect', () => {
-      ws.on('message', data => { target.write(data as Buffer) })
-      target.on('data',  data => { if (ws.readyState === 1) ws.send(data) })
-      target.on('end',   () => ws.close())
-      target.on('error', () => ws.close())
-      ws.on('close', () => target.destroy())
-      ws.on('error', () => target.destroy())
+    const targetUrl = reqUrl.searchParams.get('url') ?? ''
+    if (!targetUrl || (!targetUrl.startsWith('ws://') && !targetUrl.startsWith('wss://'))) {
+      socket.write('HTTP/1.1 400 Bad Request\r\n\r\n')
+      socket.destroy()
+      return
+    }
+
+    wss.handleUpgrade(req, socket, head, clientWs => {
+      const protocols = req.headers['sec-websocket-protocol']
+        ?.split(',').map(s => s.trim()).filter(Boolean)
+
+      const targetWs = new NodeWebSocket(
+        targetUrl,
+        protocols?.length ? protocols : undefined,
+        { handshakeTimeout: 10_000 },
+      )
+
+      targetWs.on('open', () => {
+        clientWs.on('message', (data, isBinary) => {
+          if (targetWs.readyState === NodeWebSocket.OPEN)
+            targetWs.send(data, { binary: isBinary })
+        })
+        targetWs.on('message', (data, isBinary) => {
+          if (clientWs.readyState === NodeWebSocket.OPEN)
+            clientWs.send(data, { binary: isBinary })
+        })
+        clientWs.on('close', (code, reason) => targetWs.close(code, reason))
+        targetWs.on('close', (code, reason) => clientWs.close(code, reason))
+        clientWs.on('error', () => targetWs.terminate())
+        targetWs.on('error', () => clientWs.terminate())
+      })
+
+      targetWs.on('error', err => {
+        console.error(`[ws/proxy] ${targetUrl} —`, err.message)
+        if (clientWs.readyState <= NodeWebSocket.OPEN) clientWs.close(1011, 'proxy error')
+      })
     })
+    return
+  }
 
-    target.on('error', err => {
-      console.error(`Tunnel error ${host}:${port} —`, err.message)
-      if (ws.readyState <= 1) ws.close()
-    })
-  })
+  // Anything else — let socket.io handle its own upgrade requests
 })
 
 // ── Start ─────────────────────────────────────────────────────────────────────

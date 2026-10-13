@@ -37,6 +37,9 @@ import com.tera5g.vpn.data.SessionInfo
 import kotlinx.coroutines.delay
 import java.net.URLEncoder
 
+// Relay status: null = unknown (first load), true = relay live, false = offline/cache
+private enum class RelayStatus { UNKNOWN, LIVE, CACHE }
+
 private data class BrowserTab(val id: Int, val url: String, val title: String)
 
 @SuppressLint("SetJavaScriptEnabled")
@@ -47,31 +50,34 @@ fun BrowserScreen(
 ) {
     val context = LocalContext.current
 
-    // Stable MutableState objects captured by WebView callbacks
-    val tabsState = remember { mutableStateOf(listOf(BrowserTab(0, "https://www.google.com", "New Tab"))) }
-    val activeIdxState = remember { mutableStateOf(0) }
+    // Stable MutableState refs so WebView factory lambdas always read current values
+    val tabsState       = remember { mutableStateOf(listOf(BrowserTab(0, "https://www.google.com", "New Tab"))) }
+    val activeIdxState  = remember { mutableStateOf(0) }
     val currentUrlState = remember { mutableStateOf("https://www.google.com") }
-    val addressTextState = remember { mutableStateOf("https://www.google.com") }
+    val addressTextState  = remember { mutableStateOf("https://www.google.com") }
     val addressFocusedState = remember { mutableStateOf(false) }
-    val isLoadingState = remember { mutableStateOf(false) }
+    val isLoadingState  = remember { mutableStateOf(false) }
     val loadProgressState = remember { mutableStateOf(0) }
-    val canGoBackState = remember { mutableStateOf(false) }
-    val canGoFwdState = remember { mutableStateOf(false) }
-    val webViewRef = remember { mutableStateOf<WebView?>(null) }
-    val cache = remember { BrowserCache(context) }
+    val canGoBackState  = remember { mutableStateOf(false) }
+    val canGoFwdState   = remember { mutableStateOf(false) }
+    val relayStatusState = remember { mutableStateOf(RelayStatus.UNKNOWN) }
+    val webViewRef      = remember { mutableStateOf<WebView?>(null) }
+    val cache           = remember { BrowserCache(context) }
 
-    var tabs by tabsState
-    var activeTabIdx by activeIdxState
-    var currentUrl by currentUrlState
-    var addressText by addressTextState
+    var tabs          by tabsState
+    var activeTabIdx  by activeIdxState
+    var currentUrl    by currentUrlState
+    var addressText   by addressTextState
     var addressFocused by addressFocusedState
-    var isLoading by isLoadingState
-    var loadProgress by loadProgressState
-    var canGoBack by canGoBackState
-    var canGoFwd by canGoFwdState
+    var isLoading     by isLoadingState
+    var loadProgress  by loadProgressState
+    var canGoBack     by canGoBackState
+    var canGoFwd      by canGoFwdState
+    var relayStatus   by relayStatusState
 
     val sessionId = sessionInfo?.sessionId ?: ""
 
+    // Session expiry watch
     LaunchedEffect(sessionInfo) {
         if (sessionInfo == null) { onSessionExpired(); return@LaunchedEffect }
         while (true) {
@@ -82,7 +88,6 @@ fun BrowserScreen(
 
     val relayClient = remember(sessionId) {
         RelayWebViewClient(
-            context = context,
             sessionId = sessionId,
             cache = cache,
             onPageTitle = { title ->
@@ -102,6 +107,10 @@ fun BrowserScreen(
                 canGoBackState.value = back
                 canGoFwdState.value = fwd
             },
+            onSessionExpired = { onSessionExpired() },
+            onRelayStatus = { reachable ->
+                relayStatusState.value = if (reachable) RelayStatus.LIVE else RelayStatus.CACHE
+            },
         )
     }
 
@@ -114,7 +123,10 @@ fun BrowserScreen(
                 if (!title.isNullOrBlank() && title != "about:blank") {
                     val list = tabsState.value.toMutableList()
                     val idx = activeIdxState.value
-                    if (idx in list.indices) { list[idx] = list[idx].copy(title = title); tabsState.value = list }
+                    if (idx in list.indices) {
+                        list[idx] = list[idx].copy(title = title)
+                        tabsState.value = list
+                    }
                 }
             }
         }
@@ -127,7 +139,7 @@ fun BrowserScreen(
 
     Column(Modifier.fillMaxSize().background(Color.Black)) {
 
-        // ── Tab Bar ───────────────────────────────────────────
+        // ── Tab Bar ────────────────────────────────────────────────────────────
         Row(
             Modifier.fillMaxWidth().height(40.dp).background(Color(0xFF0F0F0F)),
             verticalAlignment = Alignment.CenterVertically,
@@ -191,7 +203,7 @@ fun BrowserScreen(
             }
         }
 
-        // ── Address Bar ───────────────────────────────────────
+        // ── Address Bar ────────────────────────────────────────────────────────
         Row(
             Modifier
                 .fillMaxWidth().height(46.dp)
@@ -201,7 +213,7 @@ fun BrowserScreen(
             horizontalArrangement = Arrangement.spacedBy(4.dp),
         ) {
             NavBtn("←", canGoBack) { webViewRef.value?.goBack() }
-            NavBtn("→", canGoFwd) { webViewRef.value?.goForward() }
+            NavBtn("→", canGoFwd)  { webViewRef.value?.goForward() }
             NavBtn(if (isLoading) "✕" else "↻", true) {
                 if (isLoading) webViewRef.value?.stopLoading() else webViewRef.value?.reload()
             }
@@ -252,19 +264,24 @@ fun BrowserScreen(
                 }
             }
 
-            // Relay badge
+            // Relay badge — colour reflects live status
+            val badgeColor = when (relayStatus) {
+                RelayStatus.LIVE    -> Accent
+                RelayStatus.CACHE   -> Color(0xFFFF9500)  // orange = serving from cache
+                RelayStatus.UNKNOWN -> Color.White.copy(.4f)
+            }
             Box(
                 Modifier
                     .clip(RoundedCornerShape(4.dp))
-                    .background(Accent.copy(.1f))
-                    .border(1.dp, Accent.copy(.2f), RoundedCornerShape(4.dp))
+                    .background(badgeColor.copy(.1f))
+                    .border(1.dp, badgeColor.copy(.25f), RoundedCornerShape(4.dp))
                     .padding(horizontal = 5.dp, vertical = 3.dp),
             ) {
-                Text("RELAY", color = Accent, fontSize = 8.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.5.sp)
+                Text("RELAY", color = badgeColor, fontSize = 8.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.5.sp)
             }
         }
 
-        // ── Progress bar ──────────────────────────────────────
+        // ── Loading bar ────────────────────────────────────────────────────────
         if (isLoading) {
             LinearProgressIndicator(
                 progress = { loadProgress / 100f },
@@ -274,32 +291,32 @@ fun BrowserScreen(
             )
         }
 
-        // ── WebView ───────────────────────────────────────────
+        // ── WebView ────────────────────────────────────────────────────────────
         AndroidView(
             factory = { ctx ->
                 @SuppressLint("SetJavaScriptEnabled")
                 WebView(ctx).apply {
                     settings.javaScriptEnabled = true
-                    settings.domStorageEnabled = true
+                    settings.domStorageEnabled  = true
                     settings.loadWithOverviewMode = true
-                    settings.useWideViewPort = true
+                    settings.useWideViewPort    = true
                     settings.setSupportZoom(true)
-                    settings.builtInZoomControls = true
-                    settings.displayZoomControls = false
-                    webViewClient = relayClient
+                    settings.builtInZoomControls  = true
+                    settings.displayZoomControls  = false
+                    webViewClient  = relayClient
                     webChromeClient = chromeClient
                     loadUrl("https://www.google.com")
                     webViewRef.value = this
                 }
             },
             update = { wv ->
-                wv.webViewClient = relayClient
+                wv.webViewClient  = relayClient
                 wv.webChromeClient = chromeClient
             },
             modifier = Modifier.weight(1f).fillMaxWidth(),
         )
 
-        // ── Status Footer ──────────────────────────────────────
+        // ── Status Footer ──────────────────────────────────────────────────────
         Row(
             Modifier
                 .fillMaxWidth()
@@ -309,10 +326,19 @@ fun BrowserScreen(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(Modifier.size(5.dp).clip(CircleShape).background(Accent))
+                val dotColor = when (relayStatus) {
+                    RelayStatus.LIVE    -> Accent
+                    RelayStatus.CACHE   -> Color(0xFFFF9500)
+                    RelayStatus.UNKNOWN -> Color.White.copy(.2f)
+                }
+                Box(Modifier.size(5.dp).clip(CircleShape).background(dotColor))
                 Spacer(Modifier.width(5.dp))
                 Text(
-                    "tera5g.world relay",
+                    when (relayStatus) {
+                        RelayStatus.LIVE    -> "tera5g.world · cloudflare"
+                        RelayStatus.CACHE   -> "offline cache"
+                        RelayStatus.UNKNOWN -> "connecting…"
+                    },
                     color = Color.White.copy(.2f),
                     fontSize = 9.sp,
                     fontFamily = FontFamily.Monospace,

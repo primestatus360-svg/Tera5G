@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Tera5G</string>
+    <string name="notification_channel_name">Tera5G VPN</string>
+    <string name="notification_title">Tera5G Connected</string>
+    <string name="notification_text">Relay active — browsing protected</string>
+</resources>

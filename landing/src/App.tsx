@@ -10,7 +10,7 @@ const DL = {
   windows: `${GH_RELEASE}/Tera5G-Browser-Setup-${VERSION}.exe`,
   mac:     `${GH_RELEASE}/Tera5G-Browser-${VERSION}-mac.dmg`,
   linux:   `${GH_RELEASE}/Tera5G-Browser-${VERSION}-linux.AppImage`,
-  android: `/downloads/Tera5G-${VERSION}.apk`,
+  android: `${GH_RELEASE}/Tera5G-${VERSION}.apk`,
 }
 
 // ─── Icons ────────────────────────────────────────────────────────────────────

@@ -8,9 +8,9 @@ import * as net from 'net'
 import WebSocket from 'ws'
 import { is } from '@electron-toolkit/utils'
 
-const TABBAR_H   = 32
-const NAVBAR_H   = 40
-const TOOLBAR_H  = TABBAR_H + NAVBAR_H   // 72 px total
+const TABBAR_H   = 34
+const NAVBAR_H   = 42
+const TOOLBAR_H  = TABBAR_H + NAVBAR_H   // 76 px total
 const PROXY      = process.env.TERA5G_PROXY  ?? 'http://127.0.0.1:8080'
 const SERVER_URL = process.env.TERA5G_SERVER ?? (is.dev ? 'http://localhost:3001' : 'https://tera5g.world')
 
@@ -261,7 +261,7 @@ function createTab(url?: string): string {
   const id         = randomUUID()
   const tabPreload = join(__dirname, '../preload/tab.js')
   const view       = new WebContentsView({ webPreferences: { contextIsolation: true, sandbox: true, preload: tabPreload } })
-  view.setBackgroundColor('#000000')
+  view.setBackgroundColor('#0b0c18')
 
   const tab: Tab = { id, view, url: '', title: 'New Tab', loading: false }
   tabs.set(id, tab)
@@ -351,10 +351,10 @@ function createWindow(): void {
     height: 820,
     minWidth: 900,
     minHeight: 500,
-    backgroundColor: '#000000',
+    backgroundColor: '#0b0c18',
     titleBarStyle:   process.platform === 'darwin' ? 'hiddenInset' : 'hidden',
     titleBarOverlay: process.platform !== 'darwin'
-      ? { color: '#000000', symbolColor: 'rgba(255,255,255,0.85)', height: TABBAR_H }
+      ? { color: '#0b0c18', symbolColor: 'rgba(255,255,255,0.70)', height: TABBAR_H }
       : false,
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),

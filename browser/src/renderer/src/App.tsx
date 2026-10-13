@@ -1,23 +1,27 @@
 import { useState, useEffect, useRef, KeyboardEvent, CSSProperties } from 'react'
 
-// ── Design tokens (Prime Status 360 admin) ────────────────────────────────────
+// ── Opera design tokens ───────────────────────────────────────────────────────
 
 const T = {
-  bg:       '#000000',
-  surface:  '#1C1C1E',
-  elevated: '#2C2C2E',
-  text:     '#FFFFFF',
-  sub:      '#8E8E93',
-  muted:    '#636366',
-  green:    '#1DB814',
-  border:   'rgba(84,84,88,0.65)',
-  divider:  'rgba(84,84,88,0.36)',
-  hover:    'rgba(84,84,88,0.12)',
-  activeNav:'rgba(255,255,255,0.09)',
-  font:     "'Inter', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif",
-  // Green palette
-  greenBg:  'rgba(29,184,20,0.10)',
-  greenBd:  'rgba(29,184,20,0.35)',
+  bg:        '#0b0c18',
+  surface:   '#0d0e1c',
+  elevated:  '#191b30',
+  panel:     'rgba(255,255,255,0.03)',
+  text:      '#e2e5f1',
+  sub:       '#7b82a8',
+  muted:     '#4a4f72',
+  veryMuted: '#3a3e5a',
+  green:     '#1DB814',
+  blue:      '#3b82f6',
+  border:    'rgba(255,255,255,0.07)',
+  divider:   'rgba(255,255,255,0.05)',
+  hover:     'rgba(255,255,255,0.06)',
+  activeTab: 'rgba(255,255,255,0.09)',
+  font:      "'Inter', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif",
+  greenBg:   'rgba(29,184,20,0.10)',
+  greenBd:   'rgba(29,184,20,0.28)',
+  blueBg:    'rgba(59,130,246,0.10)',
+  blueBd:    'rgba(59,130,246,0.28)',
 }
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -60,7 +64,6 @@ export default function App() {
     <div style={s.shell}>
       <TabBar tabs={tabs} />
       <NavBar nav={nav} proxy={proxy} />
-      {/* Cancels the drag region below the toolbar so the WebContentsView receives clicks */}
       <div style={s.noDragFloor} />
     </div>
   )
@@ -72,7 +75,6 @@ function TabBar({ tabs }: { tabs: TabsState }) {
   return (
     <div style={s.tabBar}>
       <div style={s.trafficSpacer} />
-
       <div style={s.tabStrip}>
         {tabs.list.map(tab => (
           <TabChip key={tab.id} tab={tab} active={tab.id === tabs.activeId} />
@@ -100,10 +102,8 @@ function TabChip({ tab, active }: { tab: TabItem; active: boolean }) {
     <div
       style={{
         ...s.tabChip,
-        background: active ? T.activeNav : hov ? T.hover : 'transparent',
-        border: active
-          ? `0.5px solid ${T.border}`
-          : '0.5px solid transparent',
+        background: active ? T.activeTab : hov ? T.hover : 'transparent',
+        borderColor: active ? T.border : 'transparent',
       }}
       onMouseEnter={() => setHov(true)}
       onMouseLeave={() => setHov(false)}
@@ -116,7 +116,7 @@ function TabChip({ tab, active }: { tab: TabItem; active: boolean }) {
       <span style={{
         ...s.tabTitle,
         color:      active ? T.text : T.sub,
-        fontWeight: active ? 500 : 400,
+        fontWeight: active ? 600 : 400,
       }}>
         {display}
       </span>
@@ -172,13 +172,11 @@ function NavBar({ nav, proxy }: { nav: NavState; proxy: string }) {
         {nav.loading ? <XIcon /> : <ReloadIcon />}
       </NavBtn>
 
-      {/* Address / search bar */}
+      {/* Address bar */}
       <div style={{
         ...s.bar,
-        border: focused
-          ? `0.5px solid rgba(29,184,20,0.50)`
-          : `0.5px solid ${T.border}`,
-        boxShadow: focused ? `0 0 0 2px rgba(29,184,20,0.12)` : 'none',
+        borderColor: focused ? 'rgba(59,130,246,0.45)' : T.border,
+        boxShadow:   focused ? '0 0 0 2px rgba(59,130,246,0.10)' : 'none',
       }}>
         <span style={{ ...s.lockWrap, color: url ? (isSecure ? T.green : T.muted) : T.muted }}>
           {isSecure ? <LockIcon /> : <UnlockIcon />}
@@ -213,8 +211,8 @@ function NavBar({ nav, proxy }: { nav: NavState; proxy: string }) {
       <div style={s.relay} title={`Proxying via ${proxy}`}>
         <div style={{
           ...s.relayDot,
-          background: nav.loading ? T.sub : T.green,
-          boxShadow:  nav.loading ? 'none' : `0 0 5px ${T.green}88`,
+          background: nav.loading ? T.muted : T.green,
+          boxShadow:  nav.loading ? 'none' : `0 0 6px ${T.green}99`,
         }} />
         <span style={s.relayLabel}>RELAY</span>
         {proxy && <span style={s.relayHost}>{proxy}</span>}
@@ -239,9 +237,9 @@ function NavBtn({ children, disabled, onClick, title }: {
       onMouseUp={() => setPress(false)}
       style={{
         ...s.navBtn,
-        opacity:    disabled ? 0.25 : 1,
-        background: press ? 'rgba(84,84,88,0.20)' : hov && !disabled ? T.hover : 'transparent',
-        transform:  press ? 'scale(0.88)' : 'scale(1)',
+        opacity:    disabled ? 0.22 : 1,
+        background: press ? 'rgba(255,255,255,0.10)' : hov && !disabled ? T.hover : 'transparent',
+        transform:  press ? 'scale(0.87)' : 'scale(1)',
       }}
     >
       {children}
@@ -266,7 +264,7 @@ const PlusIcon   = () => <Ico size={12}><line x1="10" y1="3" x2="10" y2="17"/><l
 
 const XSmall = () => (
   <svg width="8" height="8" viewBox="0 0 10 10" fill="none"
-    stroke={T.sub} strokeWidth="1.8" strokeLinecap="round">
+    stroke={T.muted} strokeWidth="1.8" strokeLinecap="round">
     <line x1="1" y1="1" x2="9" y2="9"/><line x1="9" y1="1" x2="1" y2="9"/>
   </svg>
 )
@@ -323,9 +321,9 @@ const s: Record<string, CSSProperties> = {
   tabBar: {
     display: 'flex',
     alignItems: 'center',
-    height: 32,
+    height: 34,
     background: T.bg,
-    borderBottom: `0.5px solid ${T.divider}`,
+    borderBottom: `1px solid ${T.divider}`,
     paddingRight: IS_MAC ? 8 : WIN_CTRL_W + 8,
     flexShrink: 0,
   } as CSSProperties,
@@ -353,12 +351,13 @@ const s: Record<string, CSSProperties> = {
     gap: 5,
     minWidth: 90,
     maxWidth: 180,
-    height: 24,
-    paddingInline: 8,
+    height: 26,
+    paddingInline: 9,
     borderRadius: 8,
+    border: '1px solid transparent',
     cursor: 'pointer',
     flexShrink: 0,
-    transition: 'background 0.15s ease, border-color 0.15s ease',
+    transition: 'background 0.14s ease, border-color 0.14s ease',
   } as CSSProperties,
 
   tabFavicon: {
@@ -383,7 +382,7 @@ const s: Record<string, CSSProperties> = {
     textOverflow: 'ellipsis',
     whiteSpace: 'nowrap',
     fontFamily: T.font,
-    transition: 'color 0.15s ease',
+    transition: 'color 0.14s ease',
   },
 
   tabClose: {
@@ -396,21 +395,21 @@ const s: Record<string, CSSProperties> = {
     cursor: 'pointer',
     flexShrink: 0,
     padding: 0,
-    transition: 'opacity 0.15s ease',
+    transition: 'opacity 0.14s ease',
   } as CSSProperties,
 
   newTabBtn: {
     WebkitAppRegion: 'no-drag',
     background: 'transparent',
-    border: `0.5px solid ${T.border}`,
-    borderRadius: 6,
-    width: 22, height: 22,
+    border: `1px solid ${T.border}`,
+    borderRadius: 7,
+    width: 24, height: 24,
     display: 'flex', alignItems: 'center', justifyContent: 'center',
     cursor: 'pointer',
     flexShrink: 0,
     color: T.sub,
     marginLeft: 2,
-    transition: 'background 0.15s ease, border-color 0.15s ease',
+    transition: 'background 0.14s ease, border-color 0.14s ease',
   } as CSSProperties,
 
   // ── Nav bar ────────────────────────────────────────────────────────────
@@ -419,9 +418,9 @@ const s: Record<string, CSSProperties> = {
     display: 'flex',
     alignItems: 'center',
     gap: 4,
-    height: 40,
+    height: 42,
     background: T.surface,
-    borderBottom: `0.5px solid ${T.divider}`,
+    borderBottom: `1px solid ${T.divider}`,
     paddingInline: 10,
     flexShrink: 0,
   },
@@ -438,10 +437,9 @@ const s: Record<string, CSSProperties> = {
     borderRadius: 8,
     cursor: 'pointer',
     flexShrink: 0,
-    transition: 'background 0.15s ease, transform 0.08s ease',
+    transition: 'background 0.14s ease, transform 0.08s ease',
   } as CSSProperties,
 
-  // Address bar — matches admin input field style
   bar: {
     flex: 1,
     display: 'flex',
@@ -449,10 +447,11 @@ const s: Record<string, CSSProperties> = {
     gap: 8,
     height: 30,
     background: T.elevated,
+    border: `1px solid ${T.border}`,
     borderRadius: 10,
     paddingInline: 11,
     WebkitAppRegion: 'no-drag',
-    transition: 'border 0.15s ease, box-shadow 0.15s ease',
+    transition: 'border-color 0.15s ease, box-shadow 0.15s ease',
   } as CSSProperties,
 
   lockWrap: {
@@ -471,7 +470,7 @@ const s: Record<string, CSSProperties> = {
     fontSize: 12,
     fontFamily: T.font,
     letterSpacing: 0.1,
-    caretColor: T.green,
+    caretColor: T.blue,
   } as CSSProperties,
 
   spinner: {
@@ -495,15 +494,14 @@ const s: Record<string, CSSProperties> = {
     padding: 0,
   } as CSSProperties,
 
-  // Relay badge — matches admin status indicators
   relay: {
     WebkitAppRegion: 'no-drag',
     display: 'flex',
     alignItems: 'center',
     gap: 5,
     background: T.greenBg,
-    border: `0.5px solid ${T.greenBd}`,
-    borderRadius: 20,
+    border: `1px solid ${T.greenBd}`,
+    borderRadius: 99,
     paddingInline: 10,
     paddingBlock: 4,
     flexShrink: 0,
@@ -520,8 +518,8 @@ const s: Record<string, CSSProperties> = {
   relayLabel: {
     color: T.green,
     fontSize: 10,
-    fontWeight: 600,
-    letterSpacing: 1,
+    fontWeight: 700,
+    letterSpacing: 1.2,
     fontFamily: T.font,
   },
 

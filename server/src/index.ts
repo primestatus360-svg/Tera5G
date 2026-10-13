@@ -498,7 +498,44 @@ app.post('/api/pay/redeem', (req, res) => {
   if (!code?.trim()) return res.status(400).json({ error: 'Voucher code required' })
   const result = redeemVoucher(code.trim(), phone)
   if (!result.ok) return res.status(400).json({ error: result.error })
+
+  // Store the session so /api/browse and /ws/tunnel can validate it
+  sessions.set(result.sessionId!, {
+    id:             result.sessionId!,
+    phone:          phone ?? '',
+    plan:           result.plan as '6h' | '24h',
+    amount:         0,
+    provider:       'voucher',
+    status:         'active',
+    expiresAt:      result.expiresAt!,
+    transactionRef: code.trim(),
+    createdAt:      Date.now(),
+  })
+
+  console.log(`[voucher] ✓ redeemed ${code.trim()} → session ${result.sessionId} (${result.plan}, expires ${new Date(result.expiresAt!).toISOString()})`)
   return res.json({ success: true, sessionId: result.sessionId, plan: result.plan, expiresAt: result.expiresAt })
+})
+
+// ── Admin: grant free session ─────────────────────────────────────────────────
+
+app.post('/api/admin/pay/grant', (req, res) => {
+  const { adminKey, phone, plan = '6h', hours } = req.body as {
+    adminKey?: string; phone?: string; plan?: string; hours?: number
+  }
+  if (adminKey !== store.adminKey) return res.status(403).json({ error: 'Invalid admin key' })
+  if (!phone) return res.status(400).json({ error: 'phone required' })
+
+  const planMs = plan === '24h' ? 24 * 3_600_000 : 6 * 3_600_000
+  const durationMs = hours ? Number(hours) * 3_600_000 : planMs
+  const id = uuidv4()
+  sessions.set(id, {
+    id, phone, plan: plan as '6h' | '24h', amount: 0,
+    provider: 'admin-grant', status: 'active',
+    expiresAt: Date.now() + durationMs,
+    transactionRef: 'admin-grant', createdAt: Date.now(),
+  })
+  console.log(`[admin] granted ${plan} session to ${phone} → ${id}`)
+  return res.json({ ok: true, sessionId: id, plan, expiresAt: Date.now() + durationMs })
 })
 
 // ── Admin: connections snapshot ───────────────────────────────────────────────

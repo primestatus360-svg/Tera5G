@@ -22,6 +22,22 @@ const PLAN_MS:      Record<string, number> = { '6h': 6 * 3_600_000, '24h': 24 * 
 
 export const vouchers = new Map<string, Voucher>()
 
+// Seed vouchers from env var so they survive restarts.
+// Format: SEED_VOUCHERS=CODE1:plan,CODE2:plan  e.g. ABCD-1234:6h,WXYZ-5678:24h
+;(process.env.SEED_VOUCHERS ?? '').split(',').forEach(entry => {
+  const [code, plan] = entry.trim().split(':')
+  if (!code || !plan || !PLAN_AMOUNTS[plan]) return
+  const key = code.toUpperCase()
+  if (!vouchers.has(key)) {
+    vouchers.set(key, {
+      code: key, plan: plan as '6h' | '24h',
+      amount: PLAN_AMOUNTS[plan],
+      status: 'active', createdAt: Date.now(),
+      validUntil: Date.now() + 365 * 24 * 3_600_000,
+    })
+  }
+})
+
 // ── Code generator ────────────────────────────────────────────────────────────
 
 function generateCode(): string {

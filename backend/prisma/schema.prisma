@@ -1,0 +1,44 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model DeviceAccess {
+  deviceId  String @id @map("device_id")
+  plan      String
+  expiresAt Float  @map("expires_at")
+  txRef     String @default("") @map("tx_ref")
+  provider  String @default("unknown")
+  createdAt Float  @map("created_at")
+  updatedAt Float  @map("updated_at")
+
+  @@map("device_access")
+}
+
+model Payment {
+  txRef     String  @id @map("tx_ref")
+  deviceId  String  @map("device_id")
+  plan      String
+  amount    Int
+  flwId     String? @map("flw_id")
+  status    String  @default("pending")
+  provider  String
+  createdAt Float   @map("created_at")
+  updatedAt Float   @map("updated_at")
+
+  @@index([deviceId])
+  @@map("payments")
+}
+
+model ServerConfig {
+  id        Int    @id @default(autoincrement())
+  payload   String
+  version   Int    @default(1)
+  updatedAt Float  @map("updated_at")
+
+  @@map("server_configs")
+}

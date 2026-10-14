@@ -1,0 +1,36 @@
+# ── Secrets — NEVER commit these ─────────────────────────────────────────────
+android/local.properties
+backend/.env
+
+# ── Native libs — download manually per SETUP.md ─────────────────────────────
+android/app/libs/
+android/app/src/main/jniLibs/
+
+# ── Android build outputs ─────────────────────────────────────────────────────
+android/.gradle/
+android/build/
+android/app/build/
+android/captures/
+android/.idea/
+android/**/*.iml
+
+# ── Signing keystores ─────────────────────────────────────────────────────────
+*.keystore
+*.jks
+
+# ── Backend build & dependencies ──────────────────────────────────────────────
+backend/node_modules/
+backend/dist/
+backend/*.js.map
+
+# ── JADX decompiler cache (null/ folder) ─────────────────────────────────────
+null/
+
+# ── Claude Code workspace files ──────────────────────────────────────────────
+.claude/
+
+# ── OS / editor noise ─────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+.idea/
+*.swp

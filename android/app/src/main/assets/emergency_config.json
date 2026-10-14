@@ -1,0 +1,65 @@
+{
+  "version": 1,
+  "updatedAt": 0,
+  "servers": [
+    {
+      "id": "fallback-vless-reality-1",
+      "group": "ultrasecure",
+      "protocol": "vless",
+      "address": "REPLACE_WITH_YOUR_SERVER_IP",
+      "port": 443,
+      "transport": "tcp",
+      "uuid": "REPLACE_WITH_UUID",
+      "tls": false,
+      "useReality": true,
+      "realityPublicKey": "REPLACE_WITH_SERVER_X25519_PUBLIC_KEY",
+      "realityShortId": "REPLACE_WITH_SHORT_ID",
+      "realityFingerprint": "chrome",
+      "realityServerName": "www.microsoft.com",
+      "realitySpiderX": "/",
+      "allowInsecure": false,
+      "weight": 10,
+      "locationCode": "SG",
+      "locationName": "Singapore"
+    },
+    {
+      "id": "fallback-vmess-ws-1",
+      "group": "highspeed",
+      "protocol": "vmess",
+      "address": "REPLACE_WITH_YOUR_CF_DOMAIN",
+      "port": 443,
+      "transport": "ws",
+      "wsPath": "/tera",
+      "wsHost": "REPLACE_WITH_YOUR_CF_DOMAIN",
+      "uuid": "REPLACE_WITH_UUID",
+      "alterId": 0,
+      "security": "auto",
+      "tls": true,
+      "tlsSni": "REPLACE_WITH_YOUR_CF_DOMAIN",
+      "allowInsecure": false,
+      "weight": 8,
+      "locationCode": "SG",
+      "locationName": "Singapore"
+    }
+  ],
+  "routing": {
+    "smart": {
+      "domainStrategy": "IPIfNonMatch",
+      "bypassDomains": ["geosite:private"],
+      "bypassIps": ["geoip:private"],
+      "blockAds": true
+    },
+    "fullTunnel": {
+      "domainStrategy": "IPIfNonMatch",
+      "bypassDomains": [],
+      "bypassIps": [],
+      "blockAds": true
+    },
+    "fast": {
+      "domainStrategy": "IPIfNonMatch",
+      "bypassDomains": ["geosite:private"],
+      "bypassIps": ["geoip:private"],
+      "blockAds": false
+    }
+  }
+}

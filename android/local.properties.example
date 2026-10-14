@@ -1,0 +1,28 @@
+# ─────────────────────────────────────────────────────────────────────────────
+#  Tera5G Android — Local Properties
+#  Copy this file: cp local.properties.example local.properties
+#  NEVER commit local.properties — it is already in .gitignore.
+# ─────────────────────────────────────────────────────────────────────────────
+
+# ── Android SDK path ──────────────────────────────────────────────────────────
+# Windows example: sdk.dir=C\:\\Users\\YourName\\AppData\\Local\\Android\\Sdk
+# macOS / Linux:   sdk.dir=/Users/yourname/Library/Android/sdk
+sdk.dir=C\:\\Users\\ARIAKA WALTER\\AppData\\Local\\Android\\Sdk
+
+# ── Backend URL ───────────────────────────────────────────────────────────────
+# The public URL where your backend is deployed (no trailing slash).
+BACKEND_URL=https://api.tera5g.app
+
+# ── Config AES Key ────────────────────────────────────────────────────────────
+# 64-character hex key (32 bytes). MUST be the exact same value as
+# CONFIG_AES_KEY in backend/.env.
+# Generate: openssl rand -hex 32
+CONFIG_AES_KEY=
+
+# ── Release Signing (only needed for assembleRelease / bundleRelease) ─────────
+# Generate keystore: keytool -genkey -v -keystore tera5g.keystore
+#   -alias tera5g -keyalg RSA -keysize 2048 -validity 10000
+# KEYSTORE_PATH=/path/to/tera5g.keystore
+# KEYSTORE_PASSWORD=
+# KEY_ALIAS=tera5g
+# KEY_PASSWORD=

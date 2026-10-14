@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Tera5G</string>
+    <string name="notification_channel_vpn">Connection Status</string>
+    <string name="notification_connected">Tera5G is protecting your connection</string>
+    <string name="notification_connecting">Tera5G is connecting…</string>
+    <string name="notification_title">Tera5G</string>
+</resources>

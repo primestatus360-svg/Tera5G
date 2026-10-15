@@ -65,7 +65,7 @@ fun SplashScreen(onComplete: () -> Unit) {
                 Box(Modifier.size(192.dp).background(NeonGreen.copy(glowPulse * 0.55f), CircleShape))
                 Box(Modifier.size(156.dp).background(NeonGreen.copy(glowPulse * 0.08f), CircleShape))
                 Image(
-                    painter            = painterResource(R.mipmap.ic_launcher),
+                    painter            = painterResource(R.mipmap.ic_launcher_foreground),
                     contentDescription = "Tera5G",
                     modifier           = Modifier.size(144.dp)
                 )

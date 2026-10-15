@@ -41,14 +41,12 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
 
     fun refreshAccess() {
         viewModelScope.launch {
-            // Check local token first (fast path)
-            val local = paymentRepo.getLocalToken()
-            _accessToken.value = local
-            // Validate against backend if local token exists
-            if (local != null) {
-                paymentRepo.verifyWithBackend()
-                _accessToken.value = paymentRepo.getLocalToken()
-            }
+            // Show cached state immediately (fast path)
+            _accessToken.value = paymentRepo.getLocalToken()
+            // Always check backend — when paywall is off the server grants free access
+            // to anyone who asks, even with no prior token
+            paymentRepo.verifyWithBackend()
+            _accessToken.value = paymentRepo.getLocalToken()
         }
     }
 

@@ -7,16 +7,13 @@ import android.os.*
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import kotlinx.coroutines.*
+import libv2ray.CoreCallbackHandler
+import libv2ray.CoreController
 import libv2ray.Libv2ray
-import libv2ray.V2RayPoint
-import libv2ray.V2RayVPNServiceSupportsSet
 import ug.tera5g.R
 import ug.tera5g.MainActivity
-import ug.tera5g.config.ConfigBuilder
-import ug.tera5g.config.RoutingMode
-import ug.tera5g.config.ServerProfile
 
-class V2RayVpnService : VpnService(), V2RayVPNServiceSupportsSet {
+class V2RayVpnService : VpnService(), CoreCallbackHandler {
 
     companion object {
         private const val TAG = "Tera5G_VPN"
@@ -32,9 +29,9 @@ class V2RayVpnService : VpnService(), V2RayVPNServiceSupportsSet {
             private set
     }
 
-    private var v2rayPoint: V2RayPoint? = null
+    private var coreController: CoreController? = null
     private var pfd: ParcelFileDescriptor? = null
-    private var tun2socksProcess: Process? = null
+    private var tun2socksProcess: java.lang.Process? = null
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
     // ── VpnService lifecycle ──────────────────────────────────────────────
@@ -69,16 +66,15 @@ class V2RayVpnService : VpnService(), V2RayVPNServiceSupportsSet {
             // 1. Copy geo assets to filesDir so V2Ray can load them
             V2RayAssets.copyToFilesDir(this)
 
-            // 2. Start V2Ray core via libv2ray
-            val point = Libv2ray.newV2RayPoint(this, false)
-            point.configureFileContent = configJson
-            point.domainName = ""
-            point.enableLocalDNS = false
-            point.forwardIpv6 = false
-            point.runLoop(false)
-            v2rayPoint = point
+            // 2. Init core environment with the assets path
+            Libv2ray.initCoreEnv(filesDir.absolutePath, "")
 
-            // 3. Establish Android VPN tunnel
+            // 3. Start V2Ray/Xray core via libv2ray
+            val ctrl = Libv2ray.newCoreController(this)
+            ctrl.startLoop(configJson, 0)
+            coreController = ctrl
+
+            // 4. Establish Android VPN tunnel
             val builder = Builder()
                 .setSession("Tera5G")
                 .setMtu(1500)
@@ -95,7 +91,7 @@ class V2RayVpnService : VpnService(), V2RayVPNServiceSupportsSet {
 
             pfd = builder.establish() ?: throw Exception("VPN tunnel establishment failed")
 
-            // 4. Start tun2socks to bridge tun → SOCKS5:10808
+            // 5. Start tun2socks to bridge tun → SOCKS5:10808
             startTun2socks(pfd!!.fd)
 
             isRunning = true
@@ -118,8 +114,8 @@ class V2RayVpnService : VpnService(), V2RayVPNServiceSupportsSet {
             tun2socksProcess = null
             pfd?.close()
             pfd = null
-            v2rayPoint?.stopLoop()
-            v2rayPoint = null
+            coreController?.stopLoop()
+            coreController = null
         } catch (e: Exception) {
             Log.e(TAG, "Error stopping tunnel", e)
         }
@@ -129,19 +125,30 @@ class V2RayVpnService : VpnService(), V2RayVPNServiceSupportsSet {
     }
 
     private fun startTun2socks(tunFd: Int) {
-        val tun2socksPath = "${applicationInfo.nativeLibraryDir}/libtun2socks.so"
-        val cmd = arrayOf(
-            tun2socksPath,
-            "--netif-ipaddr",          "10.0.0.2",
-            "--netif-netmask",         "255.255.255.0",
-            "--socks-server-addr",     "127.0.0.1:10808",
-            "--tunfd",                 tunFd.toString(),
-            "--tunmtu",               "1500",
-            "--udpgw-remote-server-addr", "127.0.0.1:7300",
-            "--udpgw-transparent-dns",
-            "--loglevel",             "error"
-        )
-        tun2socksProcess = Runtime.getRuntime().exec(cmd)
+        val tunPath  = "${applicationInfo.nativeLibraryDir}/libtun2socks.so"
+        val cfgFile  = java.io.File(filesDir, "hev-tun.yml")
+        cfgFile.writeText("""
+tunnel:
+  fd: $tunFd
+  mtu: 1500
+  ipv4: 10.0.0.2
+
+socks5:
+  address: 127.0.0.1
+  port: 10808
+  udp: udp
+
+misc:
+  log-file: stderr
+  log-level: error
+  task-stack-size: 81920
+  connect-timeout: 0
+  read-write-timeout: 60
+  limit-nofile: 65535
+""".trimIndent())
+        tun2socksProcess = ProcessBuilder(tunPath, cfgFile.absolutePath)
+            .redirectErrorStream(true)
+            .start() as java.lang.Process
     }
 
     private fun loadBypassApps(builder: Builder) {
@@ -193,10 +200,9 @@ class V2RayVpnService : VpnService(), V2RayVPNServiceSupportsSet {
         getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
     }
 
-    // ── V2RayVPNServiceSupportsSet callbacks ──────────────────────────────
+    // ── CoreCallbackHandler callbacks ─────────────────────────────────────
 
-    override fun shutdown() { stopTunnel() }
-    override fun prepare(): Int = 0
-    override fun protect(l: Long): Boolean = protect(l.toInt())
-    override fun onEmitStatus(l: Long, s: String?): Int = 0
+    override fun shutdown(): Long { stopTunnel(); return 0L }
+    override fun startup(): Long = 0L
+    override fun onEmitStatus(l: Long, s: String?): Long = 0L
 }

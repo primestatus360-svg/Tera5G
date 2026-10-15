@@ -1,12 +1,9 @@
 import express, { Router, Request, Response } from 'express';
-import { prisma, PLAN_DURATIONS } from '../db';
+import { db, PLAN_DURATIONS } from '../db';
 import { xmlValue } from './yo';
 
 export const webhookRouter = Router();
 
-// POST /api/pay/webhook — Yo! Uganda calls this when payment succeeds/fails.
-// Yo! sends XML (or occasionally form-encoded); responds with plain-text "SUCCESS".
-// Security: whitelist your VPS static IP with Yo! Uganda so only their servers call this.
 webhookRouter.post(
     '/webhook',
     express.text({ type: '*/*', limit: '1mb' }),
@@ -16,21 +13,16 @@ webhookRouter.post(
         const txRef     = xmlValue(rawBody, 'ExternalReference');
         const txnStatus = xmlValue(
             rawBody,
-            'TransactionStatus',
-            'YBSTransactionStatus',
-            'AutoCreateTransactionStatus',
+            'TransactionStatus', 'YBSTransactionStatus', 'AutoCreateTransactionStatus',
         ).toUpperCase();
         const internalRef = xmlValue(
             rawBody,
-            'InternalReference',
-            'InternalTransactionId',
-            'TransactionReference',
-            'MNOTransactionReferenceId',
+            'InternalReference', 'InternalTransactionId',
+            'TransactionReference', 'MNOTransactionReferenceId',
         );
 
         console.log(`[webhook] ref=${txRef} status=${txnStatus}`);
 
-        // Always respond SUCCESS — Yo! retries on non-200 responses.
         if (!txRef) return res.status(200).send('SUCCESS');
 
         const succeeded =
@@ -41,35 +33,41 @@ webhookRouter.post(
 
         if (!succeeded) {
             if (txnStatus === 'FAILED' || txnStatus === 'CANCELLED' || txnStatus === 'TIMEOUT') {
-                await prisma.payment.updateMany({
-                    where: { txRef, status: 'pending' },
-                    data:  { status: 'failed', updatedAt: Date.now() }
-                }).catch(err => console.error('[webhook] Failed to mark payment failed', err));
+                const { error: failErr } = await db.from('payments')
+                    .update({ status: 'failed', updated_at: Date.now() })
+                    .eq('tx_ref', txRef)
+                    .eq('status', 'pending');
+                if (failErr) console.error('[webhook] Failed to mark payment failed', failErr);
             }
             return res.status(200).send('SUCCESS');
         }
 
         try {
-            // Read payment record first to get deviceId/plan/provider for the access grant.
-            const payment = await prisma.payment.findUnique({ where: { txRef } });
+            const { data: paymentRows } = await db
+                .from('payments')
+                .select('*')
+                .eq('tx_ref', txRef)
+                .limit(1);
+
+            const payment = paymentRows?.[0];
             if (!payment) {
                 console.warn('[webhook] Unknown txRef', txRef);
                 return res.status(200).send('SUCCESS');
             }
 
-            // Atomic idempotency gate: transition pending→active exactly once.
-            // If two webhook deliveries race, only one will update count=1; the other sees count=0.
-            const activated = await prisma.payment.updateMany({
-                where: { txRef, status: 'pending' },
-                data:  {
-                    status:    'active',
-                    flwId:     internalRef || payment.flwId || null,
-                    updatedAt: Date.now(),
-                }
-            });
+            // Atomic idempotency gate: only the first webhook delivery transitions pending→active.
+            const { data: activated } = await db
+                .from('payments')
+                .update({
+                    status:     'active',
+                    flw_id:     internalRef || payment.flw_id || null,
+                    updated_at: Date.now(),
+                })
+                .eq('tx_ref', txRef)
+                .eq('status', 'pending')
+                .select();
 
-            if (activated.count === 0) {
-                // Either already activated or already failed — idempotent, just ack.
+            if (!activated || activated.length === 0) {
                 console.log(`[webhook] Already processed ${txRef}`);
                 return res.status(200).send('SUCCESS');
             }
@@ -78,33 +76,22 @@ webhookRouter.post(
             const expiresAt = Date.now() + planMs;
             const now       = Date.now();
 
-            await prisma.deviceAccess.upsert({
-                where:  { deviceId: payment.deviceId },
-                create: {
-                    deviceId:  payment.deviceId,
-                    plan:      payment.plan,
-                    expiresAt,
-                    txRef,
-                    provider:  payment.provider,
-                    createdAt: now,
-                    updatedAt: now,
-                },
-                update: {
-                    plan:      payment.plan,
-                    expiresAt,
-                    txRef,
-                    provider:  payment.provider,
-                    updatedAt: now,
-                }
-            });
+            await db.from('device_access').upsert({
+                device_id:  payment.device_id,
+                plan:       payment.plan,
+                expires_at: expiresAt,
+                tx_ref:     txRef,
+                provider:   payment.provider,
+                created_at: now,
+                updated_at: now,
+            }, { onConflict: 'device_id' });
 
             console.log(
-                `[webhook] Activated ${payment.plan} for ${payment.deviceId.slice(0, 8)}… ` +
+                `[webhook] Activated ${payment.plan} for ${payment.device_id.slice(0, 8)}… ` +
                 `until ${new Date(expiresAt).toISOString()}`
             );
         } catch (err) {
             console.error('[webhook] Error activating payment', err);
-            // Return SUCCESS so Yo! stops retrying — investigate logs manually.
         }
 
         return res.status(200).send('SUCCESS');

@@ -1,5 +1,5 @@
 import { Router, Request, Response } from 'express';
-import { prisma, PLAN_DURATIONS } from '../db';
+import { db, PLAN_DURATIONS } from '../db';
 import { initiateDeposit } from './yo';
 
 const PLAN_AMOUNTS: Record<string, number> = { '5h': 500, '24h': 1000 };
@@ -8,7 +8,6 @@ const DEVICE_ID_RE      = /^[0-9a-f]{64}$/;
 
 export const paymentRouter = Router();
 
-// POST /api/pay/initiate
 paymentRouter.post('/initiate', async (req: Request, res: Response) => {
     try {
         const { deviceId, plan, phone, provider } = req.body;
@@ -30,34 +29,44 @@ paymentRouter.post('/initiate', async (req: Request, res: Response) => {
             return res.status(400).json({ ok: false, message: 'Invalid phone number' });
 
         const amount     = PLAN_AMOUNTS[plan];
-        // Random suffix prevents duplicate txRef if the same device pays twice in the same ms
-        const txRef      = `t5g_${deviceId.slice(0, 10)}_${plan}_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+        const txRef      = `t5g_${String(deviceId).slice(0, 10)}_${plan}_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
         const now        = Date.now();
         const webhookUrl = `${process.env.PUBLIC_URL}/api/pay/webhook`;
 
-        await prisma.payment.create({
-            data: { txRef, deviceId: String(deviceId), plan, amount, provider: String(provider), status: 'pending', createdAt: now, updatedAt: now }
+        const { error: insertErr } = await db.from('payments').insert({
+            tx_ref:     txRef,
+            device_id:  String(deviceId),
+            plan,
+            amount,
+            provider:   String(provider),
+            status:     'pending',
+            created_at: now,
+            updated_at: now,
+        });
+        if (insertErr) throw new Error(insertErr.message);
+
+        const yoResult = await initiateDeposit({
+            phone: String(phone), amount, txRef, plan,
+            webhookUrl, provider: String(provider),
         });
 
-        const yoResult = await initiateDeposit({ phone: String(phone), amount, txRef, plan, webhookUrl, provider: String(provider) });
-
         if (!yoResult.accepted) {
-            await prisma.payment.update({
-                where: { txRef },
-                data:  { status: 'failed', updatedAt: Date.now() }
-            }).catch(err => console.error('[payment/initiate] Failed to mark failed', err));
+            const { error: failErr } = await db.from('payments')
+                .update({ status: 'failed', updated_at: Date.now() })
+                .eq('tx_ref', txRef);
+            if (failErr) console.error('[payment/initiate] Failed to mark failed', failErr);
 
             return res.status(502).json({
                 ok:      false,
-                message: yoResult.errorMessage || 'Payment could not be started. Check your number and try again.'
+                message: yoResult.errorMessage || 'Payment could not be started. Check your number and try again.',
             });
         }
 
         if (yoResult.internalRef) {
-            await prisma.payment.update({
-                where: { txRef },
-                data:  { flwId: yoResult.internalRef, updatedAt: Date.now() }
-            }).catch(err => console.error('[payment/initiate] Failed to store internal ref', err));
+            const { error: refErr } = await db.from('payments')
+                .update({ flw_id: yoResult.internalRef, updated_at: Date.now() })
+                .eq('tx_ref', txRef);
+            if (refErr) console.error('[payment/initiate] Failed to store internal ref', refErr);
         }
 
         return res.json({ ok: true, txRef, message: 'USSD prompt sent. Approve on your phone.' });
@@ -67,7 +76,6 @@ paymentRouter.post('/initiate', async (req: Request, res: Response) => {
     }
 });
 
-// GET /api/pay/status?txRef=...&deviceId=...
 paymentRouter.get('/status', async (req: Request, res: Response) => {
     try {
         const txRef    = req.query.txRef    as string;
@@ -79,16 +87,26 @@ paymentRouter.get('/status', async (req: Request, res: Response) => {
         if (!deviceId || !DEVICE_ID_RE.test(deviceId))
             return res.status(400).json({ status: 'error', message: 'Invalid deviceId' });
 
-        const payment = await prisma.payment.findFirst({ where: { txRef, deviceId } });
+        const { data: rows } = await db.from('payments')
+            .select('*')
+            .eq('tx_ref', txRef)
+            .eq('device_id', deviceId)
+            .limit(1);
+
+        const payment = rows?.[0];
         if (!payment)
             return res.status(404).json({ status: 'error', message: 'Payment not found' });
 
         if (payment.status === 'active') {
-            const access = await prisma.deviceAccess.findUnique({ where: { deviceId } });
+            const { data: accessRows } = await db.from('device_access')
+                .select('expires_at')
+                .eq('device_id', deviceId)
+                .limit(1);
+            const access = accessRows?.[0];
             return res.json({
                 status:    'active',
                 plan:      payment.plan,
-                expiresAt: access?.expiresAt ?? (Date.now() + (PLAN_DURATIONS[payment.plan] ?? PLAN_DURATIONS['5h']))
+                expiresAt: access?.expires_at ?? (Date.now() + (PLAN_DURATIONS[payment.plan] ?? PLAN_DURATIONS['5h'])),
             });
         }
 

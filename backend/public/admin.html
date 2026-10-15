@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tera5G Admin</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+tailwind.config = {
+  theme: {
+    extend: {
+      colors: {
+        brand: { 400: '#38bdf8', 500: '#0ea5e9', 600: '#0284c7', 700: '#0369a1' }
+      }
+    }
+  }
+}
+</script>
+<style>
+  [x-cloak] { display: none !important; }
+  .spin { animation: spin 1s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: #1e293b; }
+  ::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
+</style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen font-sans" x-data="app()" x-init="init()" x-cloak>
+
+<!-- LOGIN ─────────────────────────────────────────────────────────────────── -->
+<div x-show="!authed" class="flex items-center justify-center min-h-screen p-4">
+  <div class="w-full max-w-sm">
+    <div class="text-center mb-8">
+      <div class="text-4xl font-black text-brand-400 tracking-tight">TERA5G</div>
+      <div class="text-slate-400 text-sm mt-1">Admin Console</div>
+    </div>
+    <div class="bg-slate-800 rounded-2xl p-6 shadow-2xl border border-slate-700">
+      <div class="mb-4">
+        <label class="block text-xs font-semibold text-slate-400 mb-1.5 uppercase tracking-widest">Admin Key</label>
+        <input
+          x-model="loginKey"
+          type="password"
+          placeholder="Enter admin key"
+          @keydown.enter="login()"
+          class="w-full bg-slate-900 border border-slate-600 rounded-xl px-4 py-3 text-slate-100 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition"
+        />
+      </div>
+      <div x-show="loginErr" class="text-red-400 text-xs mb-3" x-text="loginErr"></div>
+      <button
+        @click="login()"
+        :disabled="loginBusy"
+        class="w-full bg-brand-600 hover:bg-brand-500 disabled:opacity-50 text-white font-semibold py-3 rounded-xl transition flex items-center justify-center gap-2"
+      >
+        <svg x-show="loginBusy" class="spin h-4 w-4" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/></svg>
+        <span x-text="loginBusy ? 'Verifying…' : 'Sign In'"></span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- MAIN APP ────────────────────────────────────────────────────────────────── -->
+<div x-show="authed" class="flex min-h-screen">
+
+  <!-- Sidebar -->
+  <aside class="w-56 bg-slate-900 border-r border-slate-800 flex flex-col shrink-0">
+    <div class="px-5 py-5 border-b border-slate-800">
+      <div class="text-xl font-black text-brand-400 tracking-tight">TERA5G</div>
+      <div class="text-xs text-slate-500 mt-0.5">Admin Console</div>
+    </div>
+    <nav class="flex-1 p-3 space-y-1">
+      <template x-for="tab in tabs" :key="tab.id">
+        <button
+          @click="active = tab.id"
+          :class="active === tab.id ? 'bg-brand-600 text-white' : 'text-slate-400 hover:bg-slate-800 hover:text-slate-100'"
+          class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition"
+        >
+          <span x-html="tab.icon" class="w-5 h-5 shrink-0"></span>
+          <span x-text="tab.label"></span>
+        </button>
+      </template>
+    </nav>
+    <div class="p-3 border-t border-slate-800">
+      <button @click="logout()" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-slate-400 hover:bg-slate-800 hover:text-red-400 transition">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+        Sign Out
+      </button>
+    </div>
+  </aside>
+
+  <!-- Content -->
+  <main class="flex-1 overflow-auto">
+
+    <!-- DASHBOARD ─────────────────────────────────────────────────────────── -->
+    <div x-show="active === 'dashboard'" class="p-6 space-y-6">
+      <div class="flex items-center justify-between">
+        <h1 class="text-2xl font-bold">Dashboard</h1>
+        <button @click="loadStats()" class="text-xs text-brand-400 hover:text-brand-300 flex items-center gap-1">
+          <svg :class="statsLoading && 'spin'" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+          Refresh
+        </button>
+      </div>
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div class="bg-slate-800 rounded-2xl p-5 border border-slate-700">
+          <div class="text-slate-400 text-xs font-semibold uppercase tracking-widest mb-1">Active Devices</div>
+          <div class="text-3xl font-black text-brand-400" x-text="stats.activeDevices ?? '—'"></div>
+        </div>
+        <div class="bg-slate-800 rounded-2xl p-5 border border-slate-700">
+          <div class="text-slate-400 text-xs font-semibold uppercase tracking-widest mb-1">Total Payments</div>
+          <div class="text-3xl font-black text-white" x-text="stats.totalPayments ?? '—'"></div>
+        </div>
+        <div class="bg-slate-800 rounded-2xl p-5 border border-slate-700">
+          <div class="text-slate-400 text-xs font-semibold uppercase tracking-widest mb-1">Revenue (UGX)</div>
+          <div class="text-3xl font-black text-green-400" x-text="stats.revenueUGX != null ? fmtNum(stats.revenueUGX) : '—'"></div>
+        </div>
+        <div class="bg-slate-800 rounded-2xl p-5 border border-slate-700">
+          <div class="text-slate-400 text-xs font-semibold uppercase tracking-widest mb-1">Last 24h</div>
+          <div class="text-3xl font-black text-yellow-400" x-text="stats.paymentsLast24h ?? '—'"></div>
+        </div>
+      </div>
+
+      <!-- Paywall quick toggle -->
+      <div class="bg-slate-800 rounded-2xl p-5 border border-slate-700 flex items-center justify-between">
+        <div>
+          <div class="font-semibold text-sm">Paywall</div>
+          <div class="text-xs text-slate-400 mt-0.5" x-text="paywallEnabled ? 'Users must pay to connect.' : 'All users connect for free.'"></div>
+        </div>
+        <button
+          @click="togglePaywall()"
+          :class="paywallEnabled ? 'bg-brand-600' : 'bg-slate-600'"
+          class="relative inline-flex h-7 w-12 items-center rounded-full transition focus:outline-none"
+        >
+          <span :class="paywallEnabled ? 'translate-x-6' : 'translate-x-1'" class="inline-block h-5 w-5 transform bg-white rounded-full transition"></span>
+        </button>
+      </div>
+    </div>
+
+    <!-- PAYMENTS ──────────────────────────────────────────────────────────── -->
+    <div x-show="active === 'payments'" class="p-6 space-y-4">
+      <div class="flex items-center justify-between gap-3 flex-wrap">
+        <h1 class="text-2xl font-bold">Payments</h1>
+        <div class="flex items-center gap-2">
+          <select x-model="pFilter" @change="pPage=1; loadPayments()" class="bg-slate-800 border border-slate-600 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-brand-500">
+            <option value="all">All</option>
+            <option value="pending">Pending</option>
+            <option value="active">Active</option>
+            <option value="failed">Failed</option>
+          </select>
+          <button @click="loadPayments()" class="bg-slate-800 hover:bg-slate-700 border border-slate-600 rounded-xl px-3 py-2 text-sm transition">Refresh</button>
+        </div>
+      </div>
+      <div class="bg-slate-800 rounded-2xl border border-slate-700 overflow-hidden">
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead>
+              <tr class="border-b border-slate-700 text-slate-400 text-xs uppercase tracking-wider">
+                <th class="text-left px-4 py-3">Reference</th>
+                <th class="text-left px-4 py-3">Device</th>
+                <th class="text-left px-4 py-3">Plan</th>
+                <th class="text-left px-4 py-3">Amount</th>
+                <th class="text-left px-4 py-3">Provider</th>
+                <th class="text-left px-4 py-3">Status</th>
+                <th class="text-left px-4 py-3">Date</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr x-show="paymentsLoading">
+                <td colspan="7" class="text-center py-8 text-slate-400">Loading…</td>
+              </tr>
+              <tr x-show="!paymentsLoading && payments.length === 0">
+                <td colspan="7" class="text-center py-8 text-slate-500">No payments found</td>
+              </tr>
+              <template x-for="p in payments" :key="p.tx_ref">
+                <tr class="border-b border-slate-700/50 hover:bg-slate-700/30 transition">
+                  <td class="px-4 py-3 font-mono text-xs text-slate-300" x-text="p.tx_ref.slice(0,20)+'…'"></td>
+                  <td class="px-4 py-3 font-mono text-xs text-slate-400" x-text="p.device_id.slice(0,8)+'…'"></td>
+                  <td class="px-4 py-3">
+                    <span class="bg-slate-700 text-xs px-2 py-0.5 rounded-full" x-text="p.plan"></span>
+                  </td>
+                  <td class="px-4 py-3 text-green-400" x-text="fmtNum(p.amount) + ' UGX'"></td>
+                  <td class="px-4 py-3 text-slate-300" x-text="p.provider"></td>
+                  <td class="px-4 py-3">
+                    <span :class="{
+                      'bg-green-500/20 text-green-400': p.status === 'active',
+                      'bg-yellow-500/20 text-yellow-400': p.status === 'pending',
+                      'bg-red-500/20 text-red-400': p.status === 'failed'
+                    }" class="text-xs px-2 py-0.5 rounded-full font-medium" x-text="p.status"></span>
+                  </td>
+                  <td class="px-4 py-3 text-slate-400 text-xs" x-text="fmtDate(p.created_at)"></td>
+                </tr>
+              </template>
+            </tbody>
+          </table>
+        </div>
+        <div class="flex items-center justify-between px-4 py-3 border-t border-slate-700">
+          <span class="text-xs text-slate-400">Page <span x-text="pPage"></span></span>
+          <div class="flex gap-2">
+            <button @click="pPage--; loadPayments()" :disabled="pPage <= 1" class="text-xs px-3 py-1.5 rounded-lg bg-slate-700 hover:bg-slate-600 disabled:opacity-40 transition">Prev</button>
+            <button @click="pPage++; loadPayments()" :disabled="payments.length < 50" class="text-xs px-3 py-1.5 rounded-lg bg-slate-700 hover:bg-slate-600 disabled:opacity-40 transition">Next</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- DEVICES ───────────────────────────────────────────────────────────── -->
+    <div x-show="active === 'devices'" class="p-6 space-y-4">
+      <div class="flex items-center justify-between gap-3 flex-wrap">
+        <h1 class="text-2xl font-bold">Active Devices</h1>
+        <div class="flex items-center gap-2">
+          <button @click="showGrantModal = true" class="bg-brand-600 hover:bg-brand-500 text-white text-sm font-medium px-4 py-2 rounded-xl transition">+ Grant Access</button>
+          <button @click="loadDevices()" class="bg-slate-800 hover:bg-slate-700 border border-slate-600 rounded-xl px-3 py-2 text-sm transition">Refresh</button>
+        </div>
+      </div>
+      <div class="bg-slate-800 rounded-2xl border border-slate-700 overflow-hidden">
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead>
+              <tr class="border-b border-slate-700 text-slate-400 text-xs uppercase tracking-wider">
+                <th class="text-left px-4 py-3">Device ID</th>
+                <th class="text-left px-4 py-3">Plan</th>
+                <th class="text-left px-4 py-3">Expires</th>
+                <th class="text-left px-4 py-3">Provider</th>
+                <th class="text-left px-4 py-3"></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr x-show="devicesLoading">
+                <td colspan="5" class="text-center py-8 text-slate-400">Loading…</td>
+              </tr>
+              <tr x-show="!devicesLoading && devices.length === 0">
+                <td colspan="5" class="text-center py-8 text-slate-500">No active devices</td>
+              </tr>
+              <template x-for="d in devices" :key="d.device_id">
+                <tr class="border-b border-slate-700/50 hover:bg-slate-700/30 transition">
+                  <td class="px-4 py-3 font-mono text-xs text-slate-300" x-text="d.device_id.slice(0,16)+'…'"></td>
+                  <td class="px-4 py-3">
+                    <span class="bg-slate-700 text-xs px-2 py-0.5 rounded-full" x-text="d.plan"></span>
+                  </td>
+                  <td class="px-4 py-3 text-xs" :class="d.expires_at < Date.now() + 3600000 ? 'text-red-400' : 'text-slate-300'" x-text="fmtDate(d.expires_at)"></td>
+                  <td class="px-4 py-3 text-slate-400" x-text="d.provider"></td>
+                  <td class="px-4 py-3">
+                    <button @click="revokeDevice(d.device_id)" class="text-xs text-red-400 hover:text-red-300 transition">Revoke</button>
+                  </td>
+                </tr>
+              </template>
+            </tbody>
+          </table>
+        </div>
+        <div class="flex items-center justify-between px-4 py-3 border-t border-slate-700">
+          <span class="text-xs text-slate-400">Page <span x-text="dPage"></span></span>
+          <div class="flex gap-2">
+            <button @click="dPage--; loadDevices()" :disabled="dPage <= 1" class="text-xs px-3 py-1.5 rounded-lg bg-slate-700 hover:bg-slate-600 disabled:opacity-40 transition">Prev</button>
+            <button @click="dPage++; loadDevices()" :disabled="devices.length < 50" class="text-xs px-3 py-1.5 rounded-lg bg-slate-700 hover:bg-slate-600 disabled:opacity-40 transition">Next</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- WITHDRAW ──────────────────────────────────────────────────────────── -->
+    <div x-show="active === 'withdraw'" class="p-6 space-y-4">
+      <h1 class="text-2xl font-bold">Withdraw Funds</h1>
+      <div class="max-w-md bg-slate-800 rounded-2xl p-6 border border-slate-700 space-y-4">
+        <div>
+          <label class="block text-xs font-semibold text-slate-400 mb-1.5 uppercase tracking-widest">Phone Number</label>
+          <input x-model="wd.phone" type="tel" placeholder="e.g. 0772000000" class="w-full bg-slate-900 border border-slate-600 rounded-xl px-4 py-3 text-slate-100 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition"/>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-400 mb-1.5 uppercase tracking-widest">Amount (UGX)</label>
+          <input x-model="wd.amount" type="number" placeholder="e.g. 10000" min="500" class="w-full bg-slate-900 border border-slate-600 rounded-xl px-4 py-3 text-slate-100 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition"/>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-400 mb-1.5 uppercase tracking-widest">Network</label>
+          <select x-model="wd.provider" class="w-full bg-slate-900 border border-slate-600 rounded-xl px-4 py-3 text-slate-100 focus:outline-none focus:border-brand-500 transition">
+            <option value="MTN">MTN Mobile Money</option>
+            <option value="AIRTEL">Airtel Money</option>
+          </select>
+        </div>
+        <div x-show="wd.msg" :class="wd.ok ? 'bg-green-500/10 border-green-500/30 text-green-400' : 'bg-red-500/10 border-red-500/30 text-red-400'" class="border rounded-xl px-4 py-3 text-sm" x-text="wd.msg"></div>
+        <button @click="withdraw()" :disabled="wd.busy" class="w-full bg-brand-600 hover:bg-brand-500 disabled:opacity-50 text-white font-semibold py-3 rounded-xl transition flex items-center justify-center gap-2">
+          <svg x-show="wd.busy" class="spin h-4 w-4" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/></svg>
+          <span x-text="wd.busy ? 'Processing…' : 'Withdraw'"></span>
+        </button>
+      </div>
+    </div>
+
+    <!-- CONFIG ────────────────────────────────────────────────────────────── -->
+    <div x-show="active === 'config'" class="p-6 space-y-4">
+      <h1 class="text-2xl font-bold">Server Config</h1>
+      <div class="max-w-2xl bg-slate-800 rounded-2xl p-6 border border-slate-700 space-y-4">
+        <div>
+          <label class="block text-xs font-semibold text-slate-400 mb-1.5 uppercase tracking-widest">JSON Config</label>
+          <textarea
+            x-model="cfg.json"
+            rows="14"
+            placeholder='{"servers":[{"name":"UG-1","address":"1.2.3.4","port":443,"protocol":"vless","uuid":"..."}]}'
+            class="w-full bg-slate-900 border border-slate-600 rounded-xl px-4 py-3 text-slate-100 font-mono text-xs focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition resize-y"
+          ></textarea>
+        </div>
+        <div x-show="cfg.msg" :class="cfg.ok ? 'bg-green-500/10 border-green-500/30 text-green-400' : 'bg-red-500/10 border-red-500/30 text-red-400'" class="border rounded-xl px-4 py-3 text-sm" x-text="cfg.msg"></div>
+        <button @click="pushConfig()" :disabled="cfg.busy" class="bg-brand-600 hover:bg-brand-500 disabled:opacity-50 text-white font-semibold px-6 py-3 rounded-xl transition flex items-center gap-2">
+          <svg x-show="cfg.busy" class="spin h-4 w-4" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/></svg>
+          <span x-text="cfg.busy ? 'Uploading…' : 'Push Config'"></span>
+        </button>
+      </div>
+    </div>
+
+    <!-- SETTINGS ──────────────────────────────────────────────────────────── -->
+    <div x-show="active === 'settings'" class="p-6 space-y-4">
+      <h1 class="text-2xl font-bold">Settings</h1>
+      <div class="max-w-md space-y-3">
+        <div class="bg-slate-800 rounded-2xl p-5 border border-slate-700 flex items-center justify-between">
+          <div>
+            <div class="font-semibold">Paywall</div>
+            <div class="text-xs text-slate-400 mt-0.5" x-text="paywallEnabled ? 'Enabled — users must pay to connect' : 'Disabled — all users connect for free'"></div>
+          </div>
+          <button
+            @click="togglePaywall()"
+            :class="paywallEnabled ? 'bg-brand-600' : 'bg-slate-600'"
+            class="relative inline-flex h-7 w-12 items-center rounded-full transition focus:outline-none"
+          >
+            <span :class="paywallEnabled ? 'translate-x-6' : 'translate-x-1'" class="inline-block h-5 w-5 transform bg-white rounded-full transition"></span>
+          </button>
+        </div>
+        <div x-show="settingsMsg" :class="settingsOk ? 'bg-green-500/10 border-green-500/30 text-green-400' : 'bg-red-500/10 border-red-500/30 text-red-400'" class="border rounded-xl px-4 py-3 text-sm" x-text="settingsMsg"></div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- GRANT MODAL ─────────────────────────────────────────────────────────────── -->
+<div x-show="showGrantModal" class="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" @click.self="showGrantModal=false">
+  <div class="bg-slate-800 rounded-2xl p-6 border border-slate-700 w-full max-w-sm space-y-4">
+    <h2 class="font-bold text-lg">Grant Access</h2>
+    <div>
+      <label class="block text-xs font-semibold text-slate-400 mb-1.5 uppercase tracking-widest">Device ID (64 hex chars)</label>
+      <input x-model="grant.deviceId" type="text" placeholder="a1b2c3d4…" class="w-full bg-slate-900 border border-slate-600 rounded-xl px-4 py-3 text-slate-100 font-mono text-xs focus:outline-none focus:border-brand-500 transition"/>
+    </div>
+    <div>
+      <label class="block text-xs font-semibold text-slate-400 mb-1.5 uppercase tracking-widest">Plan</label>
+      <select x-model="grant.plan" class="w-full bg-slate-900 border border-slate-600 rounded-xl px-4 py-3 text-slate-100 focus:outline-none focus:border-brand-500 transition">
+        <option value="5h">5 Hours</option>
+        <option value="24h">24 Hours</option>
+        <option value="custom">Custom Hours</option>
+      </select>
+    </div>
+    <div x-show="grant.plan === 'custom'">
+      <label class="block text-xs font-semibold text-slate-400 mb-1.5 uppercase tracking-widest">Hours</label>
+      <input x-model="grant.hours" type="number" placeholder="e.g. 48" min="1" max="8760" class="w-full bg-slate-900 border border-slate-600 rounded-xl px-4 py-3 text-slate-100 focus:outline-none focus:border-brand-500 transition"/>
+    </div>
+    <div x-show="grant.msg" :class="grant.ok ? 'bg-green-500/10 border-green-500/30 text-green-400' : 'bg-red-500/10 border-red-500/30 text-red-400'" class="border rounded-xl px-4 py-3 text-sm" x-text="grant.msg"></div>
+    <div class="flex gap-3">
+      <button @click="showGrantModal=false" class="flex-1 bg-slate-700 hover:bg-slate-600 py-3 rounded-xl text-sm transition">Cancel</button>
+      <button @click="grantAccess()" :disabled="grant.busy" class="flex-1 bg-brand-600 hover:bg-brand-500 disabled:opacity-50 py-3 rounded-xl text-sm font-medium transition flex items-center justify-center gap-2">
+        <svg x-show="grant.busy" class="spin h-4 w-4" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/></svg>
+        <span x-text="grant.busy ? 'Granting…' : 'Grant'"></span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<script defer src="https://unpkg.com/alpinejs@3.14.1/dist/cdn.min.js"></script>
+<script>
+function app() {
+  return {
+    authed: false,
+    loginKey: '',
+    loginErr: '',
+    loginBusy: false,
+    adminKey: '',
+    active: 'dashboard',
+    tabs: [
+      { id: 'dashboard', label: 'Dashboard',    icon: '<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>' },
+      { id: 'payments',  label: 'Payments',     icon: '<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/></svg>' },
+      { id: 'devices',   label: 'Devices',      icon: '<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>' },
+      { id: 'withdraw',  label: 'Withdraw',     icon: '<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"/></svg>' },
+      { id: 'config',    label: 'VPN Config',   icon: '<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01"/></svg>' },
+      { id: 'settings',  label: 'Settings',     icon: '<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>' },
+    ],
+    stats: {},
+    statsLoading: false,
+    payments: [],
+    paymentsLoading: false,
+    pPage: 1,
+    pFilter: 'all',
+    devices: [],
+    devicesLoading: false,
+    dPage: 1,
+    paywallEnabled: true,
+    settingsMsg: '',
+    settingsOk: true,
+    showGrantModal: false,
+    grant: { deviceId: '', plan: '24h', hours: '', busy: false, msg: '', ok: true },
+    wd: { phone: '', amount: '', provider: 'MTN', busy: false, msg: '', ok: true },
+    cfg: { json: '', busy: false, msg: '', ok: true },
+
+    async init() {
+      const saved = localStorage.getItem('t5g_admin_key');
+      if (saved) {
+        this.adminKey = saved;
+        const ok = await this.verify(saved);
+        if (ok) { this.authed = true; this.onAuthed(); }
+        else { localStorage.removeItem('t5g_admin_key'); }
+      }
+    },
+
+    async verify(key) {
+      try {
+        const r = await fetch('/api/admin/stats', { headers: { 'X-Admin-Key': key } });
+        return r.ok;
+      } catch { return false; }
+    },
+
+    async login() {
+      this.loginErr = '';
+      if (!this.loginKey.trim()) { this.loginErr = 'Enter your admin key.'; return; }
+      this.loginBusy = true;
+      const ok = await this.verify(this.loginKey.trim());
+      this.loginBusy = false;
+      if (!ok) { this.loginErr = 'Invalid admin key.'; return; }
+      this.adminKey = this.loginKey.trim();
+      localStorage.setItem('t5g_admin_key', this.adminKey);
+      this.authed = true;
+      this.onAuthed();
+    },
+
+    logout() {
+      localStorage.removeItem('t5g_admin_key');
+      this.authed = false;
+      this.adminKey = '';
+      this.loginKey = '';
+    },
+
+    onAuthed() {
+      this.loadStats();
+      this.loadPaywall();
+      this.$watch('active', tab => {
+        if (tab === 'payments') this.loadPayments();
+        if (tab === 'devices')  this.loadDevices();
+      });
+    },
+
+    async api(path, opts = {}) {
+      const r = await fetch(path, { ...opts, headers: { 'Content-Type': 'application/json', 'X-Admin-Key': this.adminKey, ...(opts.headers || {}) } });
+      return r.json();
+    },
+
+    async loadStats() {
+      this.statsLoading = true;
+      try { this.stats = await this.api('/api/admin/stats'); } finally { this.statsLoading = false; }
+    },
+
+    async loadPaywall() {
+      try {
+        const d = await fetch('/api/settings').then(r => r.json());
+        this.paywallEnabled = d.paywallEnabled;
+      } catch {}
+    },
+
+    async togglePaywall() {
+      const next = !this.paywallEnabled;
+      this.settingsMsg = '';
+      try {
+        const d = await this.api('/api/admin/settings', {
+          method: 'POST',
+          body: JSON.stringify({ paywallEnabled: next }),
+        });
+        if (d.ok) {
+          this.paywallEnabled = next;
+          this.settingsMsg = `Paywall ${next ? 'enabled' : 'disabled'}.`;
+          this.settingsOk = true;
+        } else {
+          this.settingsMsg = d.error || 'Failed to update.';
+          this.settingsOk = false;
+        }
+      } catch { this.settingsMsg = 'Network error.'; this.settingsOk = false; }
+      setTimeout(() => this.settingsMsg = '', 3000);
+    },
+
+    async loadPayments() {
+      this.paymentsLoading = true;
+      try {
+        const d = await this.api(`/api/admin/payments?page=${this.pPage}&limit=50&status=${this.pFilter}`);
+        this.payments = d.payments ?? [];
+      } finally { this.paymentsLoading = false; }
+    },
+
+    async loadDevices() {
+      this.devicesLoading = true;
+      try {
+        const d = await this.api(`/api/admin/devices?page=${this.dPage}&limit=50`);
+        this.devices = d.devices ?? [];
+      } finally { this.devicesLoading = false; }
+    },
+
+    async revokeDevice(deviceId) {
+      if (!confirm(`Revoke access for ${deviceId.slice(0,16)}…?`)) return;
+      const d = await this.api('/api/admin/revoke', { method: 'POST', body: JSON.stringify({ deviceId }) });
+      if (d.ok) this.loadDevices();
+      else alert(d.error || 'Failed to revoke.');
+    },
+
+    async grantAccess() {
+      this.grant.busy = true; this.grant.msg = '';
+      try {
+        const body = { deviceId: this.grant.deviceId };
+        if (this.grant.plan === 'custom') body.hours = Number(this.grant.hours);
+        else body.plan = this.grant.plan;
+        const d = await this.api('/api/admin/grant', { method: 'POST', body: JSON.stringify(body) });
+        if (d.ok) {
+          this.grant.msg = `Access granted until ${new Date(d.expiresAt).toLocaleString()}.`;
+          this.grant.ok = true;
+          this.loadDevices();
+          setTimeout(() => { this.showGrantModal = false; this.grant.msg = ''; }, 2000);
+        } else {
+          this.grant.msg = d.error || 'Failed.';
+          this.grant.ok = false;
+        }
+      } catch { this.grant.msg = 'Network error.'; this.grant.ok = false; }
+      this.grant.busy = false;
+    },
+
+    async withdraw() {
+      this.wd.busy = true; this.wd.msg = '';
+      try {
+        const d = await this.api('/api/admin/withdraw', { method: 'POST', body: JSON.stringify({ phone: this.wd.phone, amount: Number(this.wd.amount), provider: this.wd.provider }) });
+        if (d.ok) {
+          this.wd.msg = d.message || 'Withdrawal initiated.';
+          this.wd.ok = true;
+          this.wd.phone = ''; this.wd.amount = '';
+        } else {
+          this.wd.msg = d.message || d.error || 'Failed.';
+          this.wd.ok = false;
+        }
+      } catch { this.wd.msg = 'Network error.'; this.wd.ok = false; }
+      this.wd.busy = false;
+    },
+
+    async pushConfig() {
+      this.cfg.busy = true; this.cfg.msg = '';
+      try {
+        let parsed;
+        try { parsed = JSON.parse(this.cfg.json); } catch { this.cfg.msg = 'Invalid JSON.'; this.cfg.ok = false; this.cfg.busy = false; return; }
+        const d = await this.api('/api/admin/config', { method: 'POST', body: JSON.stringify(parsed) });
+        if (d.ok) {
+          this.cfg.msg = `Config v${d.version} pushed (${d.serverCount} server${d.serverCount !== 1 ? 's' : ''}).`;
+          this.cfg.ok = true;
+        } else {
+          this.cfg.msg = d.error || 'Failed.';
+          this.cfg.ok = false;
+        }
+      } catch { this.cfg.msg = 'Network error.'; this.cfg.ok = false; }
+      this.cfg.busy = false;
+    },
+
+    fmtNum(n) { return Number(n).toLocaleString(); },
+    fmtDate(ts) { return new Date(Number(ts)).toLocaleString(); },
+  };
+}
+</script>
+</body>
+</html>

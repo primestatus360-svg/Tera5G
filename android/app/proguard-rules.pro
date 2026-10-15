@@ -44,3 +44,8 @@
 
 # ── Compose (reflection used for previews/tooling — not needed in release) ───
 -dontwarn androidx.compose.**
+
+# ── Google Error-Prone annotations (compile-time only, not needed at runtime) ─
+-dontwarn com.google.errorprone.annotations.**
+-dontwarn javax.annotation.**
+-dontwarn org.checkerframework.**

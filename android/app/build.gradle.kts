@@ -31,13 +31,27 @@ android {
         buildConfigField("String", "BACKEND_URL",    "\"$backendUrl\"")
     }
 
+    signingConfigs {
+        val keystorePath = localProps.getProperty("KEYSTORE_PATH", "")
+        val keystorePass = localProps.getProperty("KEYSTORE_PASSWORD", "")
+        val keyAlias     = localProps.getProperty("KEY_ALIAS", "")
+        val keyPass      = localProps.getProperty("KEY_PASSWORD", "")
+        if (keystorePath.isNotEmpty()) {
+            create("release") {
+                storeFile     = file(keystorePath)
+                storePassword = keystorePass
+                this.keyAlias = keyAlias
+                keyPassword   = keyPass
+            }
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
 
-            // Hard-fail release builds that ship with a missing or placeholder AES key
             val releaseKey = localProps.getProperty("CONFIG_AES_KEY", "")
             if (releaseKey.isEmpty() || !releaseKey.matches(Regex("[0-9a-fA-F]{64}"))) {
                 throw GradleException(
@@ -46,6 +60,9 @@ android {
                     "   Then add:      CONFIG_AES_KEY=<64-char hex result>\n\n"
                 )
             }
+
+            val sc = signingConfigs.findByName("release")
+            if (sc != null) signingConfig = sc
         }
     }
 
@@ -107,4 +124,10 @@ dependencies {
 
     // WorkManager for background tasks
     implementation("androidx.work:work-runtime-ktx:2.9.0")
+
+    // Lifecycle compose (collectAsStateWithLifecycle)
+    implementation("androidx.lifecycle:lifecycle-runtime-compose:2.8.1")
+
+    // SSH tunnel
+    implementation("com.trilead:trilead-ssh2:1.0.0-build222")
 }

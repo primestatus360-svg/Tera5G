@@ -183,7 +183,7 @@ fun HomeScreen(
             }
 
             Spacer(Modifier.height(28.dp))
-            Divider(color = MaterialTheme.colorScheme.outlineVariant)
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
             Spacer(Modifier.height(20.dp))
 
             // ── Connection Mode Selector ─────────────────────────────────────

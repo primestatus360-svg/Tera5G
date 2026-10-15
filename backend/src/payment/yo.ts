@@ -114,6 +114,69 @@ export interface YoDepositResult {
     statusCode:   string;
 }
 
+export interface YoWithdrawResult {
+    accepted:     boolean;
+    internalRef:  string;
+    errorMessage: string;
+    statusCode:   string;
+}
+
+function buildWithdrawXml(params: {
+    phone:    string;
+    amount:   number;
+    txRef:    string;
+    provider?: string;
+}): string {
+    const providerCode = params.provider ? (PROVIDER_CODES[params.provider] ?? '') : '';
+    const providerRef  = `T5G:${params.txRef}`.slice(0, 30);
+
+    const lines: string[] = [
+        `<APIUsername>${escapeXml(YO_USERNAME)}</APIUsername>`,
+        `<APIPassword>${escapeXml(YO_PASSWORD)}</APIPassword>`,
+        ...(YO_AUTH && YO_AUTH !== YO_PASSWORD
+            ? [`<Authorization>${escapeXml(YO_AUTH)}</Authorization>`]
+            : []),
+        `<Method>acwithdrawfunds</Method>`,
+        `<Account>${escapeXml(params.phone)}</Account>`,
+        `<Amount>${params.amount}</Amount>`,
+        `<Currency>UGX</Currency>`,
+        `<Narrative>Tera5G Admin Withdrawal</Narrative>`,
+        `<ExternalReference>${escapeXml(params.txRef.slice(0, 50))}</ExternalReference>`,
+        `<ProviderReferenceText>${escapeXml(providerRef)}</ProviderReferenceText>`,
+        ...(providerCode ? [`<AccountProviderCode>${escapeXml(providerCode)}</AccountProviderCode>`] : []),
+    ];
+
+    return `<?xml version="1.0" encoding="UTF-8"?>\n<AutoCreate><Request>${lines.join('')}</Request></AutoCreate>`;
+}
+
+export async function initiateWithdrawal(params: {
+    phone:    string;
+    amount:   number;
+    provider: string;
+}): Promise<YoWithdrawResult> {
+    if (!YO_USERNAME || !YO_PASSWORD) {
+        throw new Error('Yo! Uganda API credentials not configured.');
+    }
+    const txRef = `wdl_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+    const xml   = buildWithdrawXml({
+        phone:    normalisePhone(params.phone),
+        amount:   params.amount,
+        txRef,
+        provider: params.provider,
+    });
+
+    const responseXml = await callYo(xml);
+    const autoStatus  = xmlValue(responseXml, 'AutoCreateStatus', 'Status').toUpperCase();
+    const statusCode  = xmlValue(responseXml, 'AutoCreateReturnCode', 'StatusCode', 'ReturnCode');
+    const internalRef = xmlValue(responseXml, 'InternalReference', 'InternalTransactionId');
+    const errorMessage = xmlValue(responseXml, 'StatusMessage', 'ErrorDescription', 'ErrorMessage');
+
+    const accepted = autoStatus === 'OK' || statusCode === '01';
+    if (!accepted) console.error('[yo/withdraw] Rejected:', responseXml.slice(0, 500));
+
+    return { accepted, internalRef, errorMessage, statusCode };
+}
+
 export async function initiateDeposit(params: {
     phone:      string;
     amount:     number;

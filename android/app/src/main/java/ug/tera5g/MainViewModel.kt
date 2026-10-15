@@ -191,12 +191,8 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                 _networkName.value = ssid ?: "WiFi"
                 @Suppress("DEPRECATION")
                 val rssi = wm.connectionInfo?.rssi ?: -100
-                _signalLevel.value = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
-                    WifiManager.calculateSignalLevel(rssi)
-                } else {
-                    @Suppress("DEPRECATION")
-                    WifiManager.calculateSignalLevel(rssi, 5)
-                }.coerceIn(0, 4)
+                @Suppress("DEPRECATION")
+                _signalLevel.value = WifiManager.calculateSignalLevel(rssi, 5).coerceIn(0, 4)
             }
             caps.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) -> {
                 val tm      = ctx.getSystemService(TelephonyManager::class.java)

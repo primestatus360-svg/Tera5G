@@ -142,16 +142,22 @@ tailwind.config = {
               display:flex; align-items:center; justify-content:center; z-index:50; padding:16px; }
   .modal { background:var(--surf); border:1px solid var(--border2); border-radius:20px;
            padding:28px; width:100%; max-width:420px; box-shadow:0 24px 64px rgba(0,0,0,.6); }
+
+  /* Layout helpers used on x-show elements — Alpine only toggles display:none inline;
+     removing it restores these class-driven display values */
+  .login-wrapper { display:flex; align-items:center; justify-content:center;
+                   min-height:100vh; padding:24px; }
+  .app-wrapper   { display:flex; min-height:100vh; }
+  .tab-pane      { display:flex; flex-direction:column; gap:24px; }
 </style>
 </head>
 
+<body x-data="app()" x-init="init()">
 <!-- ─── TOASTS ──────────────────────────────────────────────────────────────── -->
 <div id="toasts"></div>
 
-<body x-data="app()" x-init="init()" x-cloak>
-
 <!-- ═══════════════════════════════ LOGIN ═══════════════════════════════════ -->
-<div x-show="!authed" style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;">
+<div x-show="!authed" class="login-wrapper">
   <div style="width:100%;max-width:360px;" class="anim-up">
 
     <!-- Logo mark -->
@@ -189,7 +195,7 @@ tailwind.config = {
 </div>
 
 <!-- ═══════════════════════════════ MAIN APP ════════════════════════════════ -->
-<div x-show="authed" style="display:flex;min-height:100vh;">
+<div x-show="authed" class="app-wrapper">
 
   <!-- ── Sidebar ─────────────────────────────────────────────────────────── -->
   <aside style="width:220px;background:var(--surf);border-right:1px solid var(--border);
@@ -246,7 +252,7 @@ tailwind.config = {
   <main style="flex:1;overflow:auto;padding:32px;max-width:1100px;">
 
     <!-- ══ DASHBOARD ══════════════════════════════════════════════════════ -->
-    <div x-show="active==='dashboard'" class="anim-up" style="display:flex;flex-direction:column;gap:24px;">
+    <div x-show="active==='dashboard'" class="tab-pane">
 
       <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;">
         <h1 class="section-head">Dashboard</h1>
@@ -357,7 +363,7 @@ tailwind.config = {
     </div>
 
     <!-- ══ PAYMENTS ═══════════════════════════════════════════════════════ -->
-    <div x-show="active==='payments'" class="anim-up" style="display:flex;flex-direction:column;gap:20px;">
+    <div x-show="active==='payments'" class="tab-pane">
 
       <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
         <h1 class="section-head">Payments</h1>
@@ -452,7 +458,7 @@ tailwind.config = {
     </div>
 
     <!-- ══ DEVICES ════════════════════════════════════════════════════════ -->
-    <div x-show="active==='devices'" class="anim-up" style="display:flex;flex-direction:column;gap:20px;">
+    <div x-show="active==='devices'" class="tab-pane">
 
       <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
         <h1 class="section-head">Active Devices</h1>
@@ -540,7 +546,7 @@ tailwind.config = {
     </div>
 
     <!-- ══ WITHDRAW ═══════════════════════════════════════════════════════ -->
-    <div x-show="active==='withdraw'" class="anim-up" style="display:flex;flex-direction:column;gap:20px;">
+    <div x-show="active==='withdraw'" class="tab-pane">
 
       <h1 class="section-head">Withdraw Funds</h1>
 
@@ -596,7 +602,7 @@ tailwind.config = {
     </div>
 
     <!-- ══ VPN CONFIG ═════════════════════════════════════════════════════ -->
-    <div x-show="active==='config'" class="anim-up" style="display:flex;flex-direction:column;gap:20px;">
+    <div x-show="active==='config'" class="tab-pane">
 
       <h1 class="section-head">VPN Server Config</h1>
 
@@ -640,7 +646,7 @@ tailwind.config = {
     </div>
 
     <!-- ══ SETTINGS ═══════════════════════════════════════════════════════ -->
-    <div x-show="active==='settings'" class="anim-up" style="display:flex;flex-direction:column;gap:20px;">
+    <div x-show="active==='settings'" class="tab-pane">
 
       <h1 class="section-head">Settings</h1>
 

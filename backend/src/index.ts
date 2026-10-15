@@ -58,17 +58,18 @@ app.use(helmet({
     },
 }));
 
-const allowedOrigins = process.env.CORS_ORIGINS
-    ? process.env.CORS_ORIGINS.split(',').map(o => o.trim())
-    : [];
+const allowedOrigins = [
+    ...(process.env.CORS_ORIGINS ? process.env.CORS_ORIGINS.split(',').map(o => o.trim()) : []),
+    process.env.PUBLIC_URL,               // Railway / production URL
+    `http://localhost:${PORT}`,           // Local admin panel
+    `https://localhost:${PORT}`,
+].filter((o): o is string => Boolean(o));
 
 app.use(cors({
-    origin: process.env.NODE_ENV === 'development'
-        ? '*'
-        : (origin, callback) => {
-            if (!origin || allowedOrigins.includes(origin)) return callback(null, true);
-            callback(new Error('Not allowed by CORS'));
-        },
+    origin: (origin, callback) => {
+        if (!origin || allowedOrigins.includes(origin)) return callback(null, true);
+        callback(new Error('Not allowed by CORS'));
+    },
     methods: ['GET', 'POST'],
 }));
 
@@ -77,6 +78,7 @@ app.use(express.json({ limit: '1mb' }));
 // ── Admin panel ──────────────────────────────────────────────────────────────
 const publicDir = path.join(__dirname, '..', 'public');   // /app/public
 app.use(express.static(publicDir));
+app.get('/',           (_req, res) => res.redirect('/admin.html'));
 app.get('/admin',      (_req, res) => res.sendFile(path.join(publicDir, 'admin.html')));
 app.get('/admin.html', (_req, res) => res.sendFile(path.join(publicDir, 'admin.html')));
 

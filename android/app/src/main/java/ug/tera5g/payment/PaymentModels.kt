@@ -39,8 +39,9 @@ data class PaymentStatusResponse(
 )
 
 sealed class PaymentResult {
-    data class Initiated(val txRef: String) : PaymentResult()
+    data class Initiated(val txRef: String)   : PaymentResult()
     data class Activated(val expiresAt: Long, val plan: String) : PaymentResult()
-    data class Failed(val message: String) : PaymentResult()
+    data class Failed(val message: String)    : PaymentResult()
+    data class TimedOut(val txRef: String)    : PaymentResult()
     object Pending : PaymentResult()
 }

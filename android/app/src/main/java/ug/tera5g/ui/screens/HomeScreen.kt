@@ -11,17 +11,18 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Info
-import androidx.compose.material.icons.outlined.Language
 import androidx.compose.material.icons.outlined.Shield
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import ug.tera5g.MainViewModel
+import ug.tera5g.R
 import ug.tera5g.config.RoutingMode
 import ug.tera5g.ui.components.*
 import ug.tera5g.ui.theme.*
@@ -32,11 +33,16 @@ fun HomeScreen(
     viewModel: MainViewModel,
     onPaywallRequested: () -> Unit
 ) {
-    val vpnState    by viewModel.vpnState.collectAsState()
-    val token       by viewModel.accessToken.collectAsState()
-    val routingMode by viewModel.routingMode.collectAsState()
-    val connMode    by viewModel.connectionMode.collectAsState()
-    val permIntent  by viewModel.vpnPermissionIntent.collectAsState()
+    val vpnState      by viewModel.vpnState.collectAsState()
+    val token         by viewModel.accessToken.collectAsState()
+    val routingMode   by viewModel.routingMode.collectAsState()
+    val connMode      by viewModel.connectionMode.collectAsState()
+    val permIntent    by viewModel.vpnPermissionIntent.collectAsState()
+    val downloadSpeed by viewModel.downloadSpeed.collectAsState()
+    val uploadSpeed   by viewModel.uploadSpeed.collectAsState()
+    val networkName   by viewModel.networkName.collectAsState()
+    val signalLevel   by viewModel.signalLevel.collectAsState()
+    val forcePaywall  by viewModel.forceShowPaywall.collectAsState()
 
     val permLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.StartActivityForResult()
@@ -46,8 +52,18 @@ fun HomeScreen(
         permIntent?.let { permLauncher.launch(it) }
     }
 
-    val isConnected  = vpnState == VpnState.CONNECTED
-    val hasAccess    = token?.isActive == true
+    LaunchedEffect(forcePaywall) {
+        if (forcePaywall) {
+            viewModel.resetForcePaywall()
+            onPaywallRequested()
+        }
+    }
+
+    val isConnected = vpnState == VpnState.CONNECTED
+    val isActive    = vpnState == VpnState.CONNECTED ||
+                      vpnState == VpnState.CONNECTING ||
+                      vpnState == VpnState.FINDING_SERVER
+    val hasAccess   = token?.isActive == true
 
     Box(
         Modifier
@@ -65,19 +81,18 @@ fun HomeScreen(
                 Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 24.dp, vertical = 16.dp),
-                verticalAlignment     = Alignment.CenterVertically
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 Surface(
-                    shape  = CircleShape,
-                    color  = NeonGreen.copy(alpha = 0.15f),
+                    shape    = CircleShape,
+                    color    = NeonGreen.copy(alpha = 0.15f),
                     modifier = Modifier.size(38.dp)
                 ) {
                     Box(contentAlignment = Alignment.Center) {
-                        Icon(
-                            Icons.Outlined.Language,
+                        Image(
+                            painter            = painterResource(R.mipmap.ic_launcher_foreground),
                             contentDescription = null,
-                            tint     = NeonGreen,
-                            modifier = Modifier.size(20.dp)
+                            modifier           = Modifier.size(30.dp)
                         )
                     }
                 }
@@ -102,19 +117,18 @@ fun HomeScreen(
             ) {
                 Spacer(Modifier.height(16.dp))
 
-                // Connect button (hero)
                 ConnectButton(
                     state   = vpnState,
                     onClick = {
-                        if (!hasAccess) onPaywallRequested()
+                        if (isActive) viewModel.toggleConnection()
+                        else if (!hasAccess) onPaywallRequested()
                         else viewModel.toggleConnection()
                     }
                 )
 
                 Spacer(Modifier.height(10.dp))
 
-                // No-access hint
-                AnimatedVisibility(visible = !hasAccess) {
+                AnimatedVisibility(visible = !hasAccess && !isActive) {
                     TextButton(onClick = onPaywallRequested) {
                         Icon(Icons.Outlined.Info, null, Modifier.size(15.dp))
                         Spacer(Modifier.width(4.dp))
@@ -128,14 +142,20 @@ fun HomeScreen(
 
                 Spacer(Modifier.height(28.dp))
 
-                // Connected status card
                 AnimatedVisibility(
                     visible = isConnected,
                     enter   = fadeIn() + slideInVertically { it / 3 },
                     exit    = fadeOut() + slideOutVertically { it / 3 }
                 ) {
-                    ConnectedCard()
-                    Spacer(Modifier.height(24.dp))
+                    Column {
+                        ConnectedCard(
+                            networkName   = networkName,
+                            signalLevel   = signalLevel,
+                            downloadSpeed = downloadSpeed,
+                            uploadSpeed   = uploadSpeed
+                        )
+                        Spacer(Modifier.height(24.dp))
+                    }
                 }
 
                 // ── Mode section ──────────────────────────────────────────
@@ -168,9 +188,9 @@ fun HomeScreen(
                 Spacer(Modifier.height(20.dp))
 
                 ConnectionModeSelector(
-                    selected  = connMode,
-                    onSelect  = viewModel::setConnectionMode,
-                    modifier  = Modifier.fillMaxWidth()
+                    selected = connMode,
+                    onSelect = viewModel::setConnectionMode,
+                    modifier = Modifier.fillMaxWidth()
                 )
 
                 Spacer(Modifier.height(40.dp))
@@ -180,56 +200,141 @@ fun HomeScreen(
 }
 
 @Composable
-private fun ConnectedCard() {
+private fun ConnectedCard(
+    networkName: String?,
+    signalLevel: Int,
+    downloadSpeed: Long,
+    uploadSpeed: Long
+) {
     Surface(
-        shape   = RoundedCornerShape(20.dp),
-        color   = NeonGreen.copy(alpha = 0.08f),
-        border  = BorderStroke(1.dp, NeonGreen.copy(alpha = 0.22f)),
+        shape    = RoundedCornerShape(20.dp),
+        color    = NeonGreen.copy(alpha = 0.08f),
+        border   = BorderStroke(1.dp, NeonGreen.copy(alpha = 0.22f)),
         modifier = Modifier.fillMaxWidth()
     ) {
-        Row(
-            Modifier.padding(horizontal = 18.dp, vertical = 16.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment     = Alignment.CenterVertically
-        ) {
+        Column(Modifier.padding(horizontal = 18.dp, vertical = 16.dp)) {
+
+            // Top: shield + status text + active badge
             Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment     = Alignment.CenterVertically
             ) {
-                Surface(
-                    shape = CircleShape,
-                    color = NeonGreen.copy(alpha = 0.18f),
-                    modifier = Modifier.size(36.dp)
+                Row(
+                    verticalAlignment     = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Icon(Icons.Outlined.Shield, null, tint = NeonGreen, modifier = Modifier.size(18.dp))
+                    Surface(
+                        shape    = CircleShape,
+                        color    = NeonGreen.copy(alpha = 0.18f),
+                        modifier = Modifier.size(36.dp)
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(Icons.Outlined.Shield, null, tint = NeonGreen, modifier = Modifier.size(18.dp))
+                        }
+                    }
+                    Column {
+                        Text(
+                            "Connection Secure",
+                            style      = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            color      = MaterialTheme.colorScheme.onSurface
+                        )
+                        Text(
+                            "Encrypted & private",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     }
                 }
-                Column {
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = NeonGreen.copy(alpha = 0.15f)
+                ) {
                     Text(
-                        "Connection Secure",
-                        style      = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.SemiBold,
-                        color      = MaterialTheme.colorScheme.onSurface
-                    )
-                    Text(
-                        "Encrypted & private",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        "● Active",
+                        style    = MaterialTheme.typography.labelSmall,
+                        color    = NeonGreen,
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp)
                     )
                 }
             }
-            Surface(
-                shape = RoundedCornerShape(8.dp),
-                color = NeonGreen.copy(alpha = 0.15f)
+
+            Spacer(Modifier.height(12.dp))
+            HorizontalDivider(color = NeonGreen.copy(alpha = 0.10f))
+            Spacer(Modifier.height(12.dp))
+
+            // Network name + signal bars
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment     = Alignment.CenterVertically
             ) {
                 Text(
-                    "● Active",
-                    style    = MaterialTheme.typography.labelSmall,
-                    color    = NeonGreen,
-                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp)
+                    networkName ?: "—",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
+                SignalBars(level = signalLevel)
+            }
+
+            Spacer(Modifier.height(8.dp))
+
+            // Download + upload speed
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(24.dp)
+            ) {
+                SpeedChip(arrow = "↓", speed = downloadSpeed, color = NeonGreen)
+                SpeedChip(arrow = "↑", speed = uploadSpeed,   color = ConnectingBlue)
             }
         }
     }
+}
+
+@Composable
+private fun SignalBars(level: Int) {
+    Row(
+        verticalAlignment     = Alignment.Bottom,
+        horizontalArrangement = Arrangement.spacedBy(2.dp)
+    ) {
+        listOf(5.dp, 8.dp, 11.dp, 15.dp).forEachIndexed { index, height ->
+            Box(
+                Modifier
+                    .width(4.dp)
+                    .height(height)
+                    .clip(RoundedCornerShape(1.dp))
+                    .background(
+                        if (index < level) NeonGreen else NeonGreen.copy(alpha = 0.18f)
+                    )
+            )
+        }
+    }
+}
+
+@Composable
+private fun SpeedChip(arrow: String, speed: Long, color: Color) {
+    Row(
+        verticalAlignment     = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(5.dp)
+    ) {
+        Text(
+            arrow,
+            style      = MaterialTheme.typography.labelMedium,
+            fontWeight = FontWeight.ExtraBold,
+            color      = color
+        )
+        Text(
+            formatSpeed(speed),
+            style      = MaterialTheme.typography.labelMedium,
+            fontWeight = FontWeight.Medium,
+            color      = MaterialTheme.colorScheme.onSurface
+        )
+    }
+}
+
+private fun formatSpeed(bytesPerSec: Long): String = when {
+    bytesPerSec >= 1_048_576 -> "%.1f MB/s".format(bytesPerSec / 1_048_576.0)
+    bytesPerSec >= 1_024     -> "%.0f KB/s".format(bytesPerSec / 1_024.0)
+    else                     -> "${bytesPerSec} B/s"
 }

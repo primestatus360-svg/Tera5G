@@ -107,6 +107,7 @@ class V2RayVpnService : VpnService(), CoreCallbackHandler {
     }
 
     private fun stopTunnel() {
+        scope.coroutineContext.cancelChildren()  // Stop in-flight startTunnel() if still running
         isRunning = false
         VpnPrefs.setRunning(this, false)
         try {

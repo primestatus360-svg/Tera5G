@@ -2,11 +2,16 @@ package ug.tera5g
 
 import android.app.Application
 import android.content.Intent
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
+import android.net.TrafficStats
 import android.net.VpnService
+import android.net.wifi.WifiManager
+import android.telephony.TelephonyManager
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
-import kotlinx.coroutines.launch
 import ug.tera5g.config.*
 import ug.tera5g.core.AccessToken
 import ug.tera5g.payment.PaymentRepository
@@ -33,20 +38,47 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     private val _vpnPermissionIntent = MutableStateFlow<Intent?>(null)
     val vpnPermissionIntent: StateFlow<Intent?> = _vpnPermissionIntent.asStateFlow()
 
+    // ── Network stats ─────────────────────────────────────────────────────────
+    private val _downloadSpeed = MutableStateFlow(0L)
+    val downloadSpeed: StateFlow<Long> = _downloadSpeed.asStateFlow()
+
+    private val _uploadSpeed = MutableStateFlow(0L)
+    val uploadSpeed: StateFlow<Long> = _uploadSpeed.asStateFlow()
+
+    private val _networkName = MutableStateFlow<String?>(null)
+    val networkName: StateFlow<String?> = _networkName.asStateFlow()
+
+    private val _signalLevel = MutableStateFlow(0)
+    val signalLevel: StateFlow<Int> = _signalLevel.asStateFlow()
+
+    // ── Paywall enforcement ────────────────────────────────────────────────────
+    private val _forceShowPaywall = MutableStateFlow(false)
+    val forceShowPaywall: StateFlow<Boolean> = _forceShowPaywall.asStateFlow()
+
     private var serverConfig: ServerConfig? = null
+    private var statsJob: Job? = null
+    private var accessPollJob: Job? = null
 
     init {
         refreshAccess()
+        viewModelScope.launch {
+            vpnState.collect { state ->
+                if (state == VpnState.CONNECTED) {
+                    startNetworkStats()
+                    startAccessPolling()
+                } else {
+                    stopMonitoringJobs()
+                }
+            }
+        }
     }
 
     fun refreshAccess() {
         viewModelScope.launch {
-            // Show cached state immediately (fast path)
             _accessToken.value = paymentRepo.getLocalToken()
-            // Always check backend — when paywall is off the server grants free access
-            // to anyone who asks, even with no prior token
-            paymentRepo.verifyWithBackend()
+            val result = paymentRepo.verifyWithBackend()
             _accessToken.value = paymentRepo.getLocalToken()
+            if (result == false) _accessToken.value = null
         }
     }
 
@@ -59,10 +91,9 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun toggleConnection() {
-        if (vpnState.value == VpnState.CONNECTED) {
-            disconnect()
-        } else {
-            startVpn()
+        when (vpnState.value) {
+            VpnState.CONNECTED, VpnState.CONNECTING, VpnState.FINDING_SERVER -> disconnect()
+            else -> startVpn()
         }
     }
 
@@ -78,7 +109,6 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             val config = serverConfig ?: serverRepo.getConfig()?.also { serverConfig = it }
                 ?: return@launch
-            // Persist current mode so BootReceiver can restore it after reboot
             ug.tera5g.v2ray.VpnPrefs.saveLastMode(ctx, _connectionMode.value, _routingMode.value)
             V2RayController.connect(
                 context     = ctx,
@@ -92,5 +122,111 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
 
     fun disconnect() {
         V2RayController.disconnect(getApplication())
+    }
+
+    fun resetForcePaywall() { _forceShowPaywall.value = false }
+
+    // ── Network monitoring ────────────────────────────────────────────────────
+
+    private fun startNetworkStats() {
+        statsJob?.cancel()
+        statsJob = viewModelScope.launch {
+            var prevRx = TrafficStats.getTotalRxBytes()
+            var prevTx = TrafficStats.getTotalTxBytes()
+            var tick = 0
+            while (isActive) {
+                delay(1_000)
+                val currRx = TrafficStats.getTotalRxBytes()
+                val currTx = TrafficStats.getTotalTxBytes()
+                _downloadSpeed.value = (currRx - prevRx).coerceAtLeast(0L)
+                _uploadSpeed.value   = (currTx - prevTx).coerceAtLeast(0L)
+                prevRx = currRx
+                prevTx = currTx
+                if (tick % 5 == 0) updateNetworkInfo()
+                tick++
+            }
+        }
+    }
+
+    private fun startAccessPolling() {
+        accessPollJob?.cancel()
+        accessPollJob = viewModelScope.launch {
+            while (isActive) {
+                delay(30_000)
+                val granted = paymentRepo.verifyWithBackend()
+                when (granted) {
+                    false -> {
+                        if (vpnState.value == VpnState.CONNECTED) {
+                            disconnect()
+                            _forceShowPaywall.value = true
+                        }
+                        _accessToken.value = null
+                    }
+                    true  -> _accessToken.value = paymentRepo.getLocalToken()
+                    null  -> { /* network error — keep current state */ }
+                }
+            }
+        }
+    }
+
+    private fun stopMonitoringJobs() {
+        statsJob?.cancel();      statsJob = null
+        accessPollJob?.cancel(); accessPollJob = null
+        _downloadSpeed.value = 0L
+        _uploadSpeed.value   = 0L
+    }
+
+    private fun updateNetworkInfo() {
+        val ctx  = getApplication<Application>()
+        val cm   = ctx.getSystemService(ConnectivityManager::class.java)
+        val caps = cm.getNetworkCapabilities(cm.activeNetwork) ?: return
+
+        when {
+            caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) -> {
+                val wm = ctx.applicationContext.getSystemService(WifiManager::class.java)
+                @Suppress("DEPRECATION")
+                val rawSsid = wm.connectionInfo?.ssid
+                val ssid = rawSsid?.trim('"')
+                    ?.takeIf { it.isNotEmpty() && it != "<unknown ssid>" }
+                _networkName.value = ssid ?: "WiFi"
+                @Suppress("DEPRECATION")
+                val rssi = wm.connectionInfo?.rssi ?: -100
+                _signalLevel.value = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
+                    WifiManager.calculateSignalLevel(rssi)
+                } else {
+                    @Suppress("DEPRECATION")
+                    WifiManager.calculateSignalLevel(rssi, 5)
+                }.coerceIn(0, 4)
+            }
+            caps.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) -> {
+                val tm      = ctx.getSystemService(TelephonyManager::class.java)
+                val carrier = tm.networkOperatorName.takeIf { it.isNotEmpty() } ?: "Mobile"
+                val netType = try {
+                    when (tm.dataNetworkType) {
+                        TelephonyManager.NETWORK_TYPE_NR   -> "5G"
+                        TelephonyManager.NETWORK_TYPE_LTE  -> "4G"
+                        TelephonyManager.NETWORK_TYPE_HSPAP,
+                        TelephonyManager.NETWORK_TYPE_HSDPA,
+                        TelephonyManager.NETWORK_TYPE_HSPA,
+                        TelephonyManager.NETWORK_TYPE_UMTS -> "3G"
+                        else                               -> ""
+                    }
+                } catch (_: SecurityException) { "" }
+                _networkName.value = listOf(carrier, netType)
+                    .filter { it.isNotEmpty() }.joinToString(" ")
+                val bw = caps.linkDownstreamBandwidthKbps
+                _signalLevel.value = when {
+                    bw > 100_000 -> 4
+                    bw > 20_000  -> 3
+                    bw > 5_000   -> 2
+                    bw > 0       -> 1
+                    else         -> 0
+                }
+            }
+            else -> {
+                _networkName.value = null
+                _signalLevel.value = 0
+            }
+        }
     }
 }

@@ -29,6 +29,7 @@ webhookRouter.post(
             txnStatus === 'SUCCEEDED'  ||
             txnStatus === 'SUCCESSFUL' ||
             txnStatus === 'COMPLETED'  ||
+            txnStatus === 'SUCCESS'    ||
             txnStatus === 'OK';
 
         if (!succeeded) {

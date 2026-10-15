@@ -1,6 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { db, PLAN_DURATIONS } from '../db';
-import { initiateDeposit } from './yo';
+import { initiateDeposit, queryTransaction } from './yo';
 
 const PLAN_AMOUNTS: Record<string, number> = { '5h': 500, '24h': 1000 };
 const ALLOWED_PROVIDERS = new Set(['MTN', 'AIRTEL']);
@@ -108,6 +108,52 @@ paymentRouter.get('/status', async (req: Request, res: Response) => {
                 plan:      payment.plan,
                 expiresAt: access?.expires_at ?? (Date.now() + (PLAN_DURATIONS[payment.plan] ?? PLAN_DURATIONS['5h'])),
             });
+        }
+
+        // ── Fallback: query Yo! Uganda directly when webhook is delayed ───────
+        // Only runs after the payment has been pending > 90 s to avoid hammering Yo!'s API
+        if (payment.status === 'pending' && Date.now() - payment.created_at > 90_000) {
+            try {
+                const yo = await queryTransaction(txRef);
+                const yoSucceeded =
+                    yo.status === 'SUCCEEDED'  || yo.status === 'SUCCESSFUL' ||
+                    yo.status === 'COMPLETED'  || yo.status === 'SUCCESS'    ||
+                    yo.status === 'OK';
+                const yoFailed =
+                    yo.status === 'FAILED' || yo.status === 'CANCELLED' || yo.status === 'TIMEOUT';
+
+                if (yoSucceeded) {
+                    const planMs    = PLAN_DURATIONS[payment.plan] ?? PLAN_DURATIONS['5h'];
+                    const expiresAt = Date.now() + planMs;
+                    const now       = Date.now();
+
+                    await db.from('payments')
+                        .update({ status: 'active', flw_id: yo.internalRef || payment.flw_id, updated_at: now })
+                        .eq('tx_ref', txRef).eq('status', 'pending');
+
+                    await db.from('device_access').upsert({
+                        device_id:  payment.device_id,
+                        plan:       payment.plan,
+                        expires_at: expiresAt,
+                        tx_ref:     txRef,
+                        provider:   payment.provider,
+                        created_at: now,
+                        updated_at: now,
+                    }, { onConflict: 'device_id' });
+
+                    console.log(`[payment/status] Yo fallback activated ${txRef}`);
+                    return res.json({ status: 'active', plan: payment.plan, expiresAt });
+                }
+
+                if (yoFailed) {
+                    await db.from('payments')
+                        .update({ status: 'failed', updated_at: Date.now() })
+                        .eq('tx_ref', txRef).eq('status', 'pending');
+                    return res.json({ status: 'failed', plan: payment.plan });
+                }
+            } catch (yoErr) {
+                console.error('[payment/status] Yo fallback query failed', yoErr);
+            }
         }
 
         return res.json({ status: payment.status, plan: payment.plan });

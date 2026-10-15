@@ -177,6 +177,36 @@ export async function initiateWithdrawal(params: {
     return { accepted, internalRef, errorMessage, statusCode };
 }
 
+export async function queryTransaction(txRef: string): Promise<{
+    status:      string;
+    internalRef: string;
+}> {
+    if (!YO_USERNAME || !YO_PASSWORD) return { status: 'unknown', internalRef: '' };
+
+    const xml =
+        `<?xml version="1.0" encoding="UTF-8"?>\n<AutoCreate><Request>` +
+        `<APIUsername>${escapeXml(YO_USERNAME)}</APIUsername>` +
+        `<APIPassword>${escapeXml(YO_PASSWORD)}</APIPassword>` +
+        (YO_AUTH && YO_AUTH !== YO_PASSWORD ? `<Authorization>${escapeXml(YO_AUTH)}</Authorization>` : '') +
+        `<Method>acquerypayment</Method>` +
+        `<ExternalReference>${escapeXml(txRef.slice(0, 50))}</ExternalReference>` +
+        `</Request></AutoCreate>`;
+
+    try {
+        const responseXml = await callYo(xml);
+        const txnStatus   = xmlValue(
+            responseXml,
+            'TransactionStatus', 'YBSTransactionStatus', 'AutoCreateTransactionStatus',
+        ).toUpperCase();
+        const internalRef = xmlValue(responseXml, 'InternalReference', 'InternalTransactionId');
+        console.log(`[yo/query] txRef=${txRef} → ${txnStatus}`);
+        return { status: txnStatus, internalRef };
+    } catch (e) {
+        console.error('[yo/query] Error querying transaction', e);
+        return { status: 'unknown', internalRef: '' };
+    }
+}
+
 export async function initiateDeposit(params: {
     phone:      string;
     amount:     number;

@@ -111,6 +111,10 @@ fun PaywallScreen(
                                                     errorMsg = result.message
                                                     step = PaywallStep.ENTER_PHONE
                                                 }
+                                                is PaymentResult.TimedOut -> {
+                                                    txRef = result.txRef
+                                                    step  = PaywallStep.TIMED_OUT
+                                                }
                                                 is PaymentResult.Pending -> { /* stay on waiting */ }
                                             }
                                         }
@@ -120,8 +124,32 @@ fun PaywallScreen(
                         )
                     }
                 }
-                PaywallStep.WAITING -> WaitingStep(provider = selectedProvider)
-                PaywallStep.SUCCESS  -> SuccessStep()
+                PaywallStep.WAITING   -> WaitingStep(provider = selectedProvider)
+                PaywallStep.TIMED_OUT -> TimedOutStep(
+                    onCheckStatus = {
+                        step = PaywallStep.WAITING
+                        scope.launch {
+                            repo.pollExistingPayment(txRef).collect { result ->
+                                when (result) {
+                                    is PaymentResult.Activated -> {
+                                        step = PaywallStep.SUCCESS
+                                        kotlinx.coroutines.delay(1500)
+                                        onAccessGranted()
+                                    }
+                                    is PaymentResult.Failed -> {
+                                        errorMsg = result.message
+                                        step = PaywallStep.ENTER_PHONE
+                                    }
+                                    is PaymentResult.TimedOut -> {
+                                        step = PaywallStep.TIMED_OUT
+                                    }
+                                    else -> { /* stay waiting */ }
+                                }
+                            }
+                        }
+                    }
+                )
+                PaywallStep.SUCCESS   -> SuccessStep()
             }
 
             Spacer(Modifier.height(32.dp))
@@ -129,7 +157,7 @@ fun PaywallScreen(
     }
 }
 
-enum class PaywallStep { CHOOSE_PLAN, ENTER_PHONE, WAITING, SUCCESS }
+enum class PaywallStep { CHOOSE_PLAN, ENTER_PHONE, WAITING, TIMED_OUT, SUCCESS }
 
 @Composable
 private fun PlanChooser(selected: Plan?, onSelect: (Plan) -> Unit) {
@@ -383,6 +411,57 @@ private fun WaitingStep(provider: Provider) {
                 )
             }
         }
+    }
+}
+
+@Composable
+private fun TimedOutStep(onCheckStatus: () -> Unit) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+        modifier = Modifier.fillMaxWidth().padding(top = 48.dp)
+    ) {
+        Surface(
+            shape    = RoundedCornerShape(50),
+            color    = WarningOrange.copy(alpha = 0.15f),
+            modifier = Modifier.size(80.dp)
+        ) {
+            Box(contentAlignment = Alignment.Center) {
+                Icon(
+                    Icons.Outlined.AccessTime,
+                    contentDescription = null,
+                    tint     = WarningOrange,
+                    modifier = Modifier.size(44.dp)
+                )
+            }
+        }
+        Text(
+            "Still Processing",
+            style      = MaterialTheme.typography.displaySmall,
+            fontWeight = FontWeight.Bold,
+            textAlign  = TextAlign.Center
+        )
+        Text(
+            "Your payment may still be processing.\nIf money was deducted from your phone,\ntap below — it will activate shortly.",
+            style     = MaterialTheme.typography.bodyMedium,
+            color     = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center
+        )
+        Spacer(Modifier.height(8.dp))
+        Button(
+            onClick  = onCheckStatus,
+            modifier = Modifier.fillMaxWidth().height(52.dp),
+            shape    = RoundedCornerShape(14.dp)
+        ) {
+            Text("Check Payment Status", style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.SemiBold)
+        }
+        Text(
+            "Or close this screen and return later.",
+            style     = MaterialTheme.typography.bodySmall,
+            color     = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center
+        )
     }
 }
 

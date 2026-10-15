@@ -1,7 +1,6 @@
 package ug.tera5g.ui.theme
 
 import android.app.Activity
-import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -11,42 +10,57 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 
-private val LightColorScheme = lightColorScheme(
-    primary          = SystemBlue,
-    onPrimary        = White,
-    primaryContainer = Color(0xFFD1E8FF),
-    secondary        = SystemGreen,
-    onSecondary      = White,
-    tertiary         = SystemOrange,
-    background       = SystemBackground,
-    onBackground     = LabelPrimary,
-    surface          = White,
-    onSurface        = LabelPrimary,
-    surfaceVariant   = SecondaryBackground,
-    onSurfaceVariant = LabelSecondary,
-    outline          = Separator,
-    outlineVariant   = OpaqueSeparator,
-    error            = SystemRed,
-    onError          = White,
+private val DarkColorScheme = darkColorScheme(
+    primary             = NeonGreen,
+    onPrimary           = DeepGreen,
+    primaryContainer    = Color(0xFF00391C),
+    onPrimaryContainer  = Color(0xFF9AFFC0),
+    secondary           = Color(0xFF5FD88A),
+    onSecondary         = Color(0xFF003821),
+    secondaryContainer  = Color(0xFF004D27),
+    onSecondaryContainer = Color(0xFF9AFFC0),
+    tertiary            = ConnectingBlue,
+    onTertiary          = White,
+    tertiaryContainer   = Color(0xFF003663),
+    onTertiaryContainer = Color(0xFFD4E3FF),
+    background          = DarkBg,
+    onBackground        = TextPrimaryDark,
+    surface             = DarkSurface,
+    onSurface           = TextPrimaryDark,
+    surfaceVariant      = DarkSurfaceVariant,
+    onSurfaceVariant    = TextSecondaryDark,
+    outline             = DarkOutline,
+    outlineVariant      = DarkSeparator,
+    error               = ErrorRed,
+    onError             = White,
+    errorContainer      = Color(0xFF93000A),
+    onErrorContainer    = Color(0xFFFFDAD6),
+    scrim               = Black.copy(alpha = 0.6f)
 )
 
-private val DarkColorScheme = darkColorScheme(
-    primary          = DarkSystemBlue,
-    onPrimary        = White,
-    primaryContainer = Color(0xFF003366),
-    secondary        = DarkSystemGreen,
-    onSecondary      = White,
-    tertiary         = DarkSystemOrange,
-    background       = DarkSystemBackground,
-    onBackground     = DarkLabelPrimary,
-    surface          = DarkSecondaryBackground,
-    onSurface        = DarkLabelPrimary,
-    surfaceVariant   = DarkTertiaryBackground,
-    onSurfaceVariant = DarkLabelSecondary,
-    outline          = DarkSeparator,
-    outlineVariant   = Color(0xFF48484A),
-    error            = DarkSystemRed,
-    onError          = White,
+private val LightColorScheme = lightColorScheme(
+    primary             = LightPrimary,
+    onPrimary           = White,
+    primaryContainer    = Color(0xFFADFAD0),
+    onPrimaryContainer  = Color(0xFF00210D),
+    secondary           = LightSecondary,
+    onSecondary         = White,
+    secondaryContainer  = Color(0xFFCCF7DE),
+    onSecondaryContainer = Color(0xFF00210D),
+    tertiary            = Color(0xFF006E85),
+    onTertiary          = White,
+    tertiaryContainer   = Color(0xFFBBEAFF),
+    onTertiaryContainer = Color(0xFF001F2A),
+    background          = LightBg,
+    onBackground        = TextPrimaryLight,
+    surface             = LightSurface,
+    onSurface           = TextPrimaryLight,
+    surfaceVariant      = LightSurfaceVariant,
+    onSurfaceVariant    = TextSecondaryLight,
+    outline             = LightOutline,
+    outlineVariant      = LightSeparator,
+    error               = Color(0xFFFF3B30),
+    onError             = White
 )
 
 @Composable

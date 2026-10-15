@@ -5,10 +5,13 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
+import androidx.compose.animation.*
+import androidx.compose.animation.core.tween
 import androidx.compose.runtime.*
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import ug.tera5g.ui.screens.HomeScreen
 import ug.tera5g.ui.screens.PaywallScreen
+import ug.tera5g.ui.screens.SplashScreen
 import ug.tera5g.ui.theme.Tera5GTheme
 
 class MainActivity : ComponentActivity() {
@@ -19,33 +22,36 @@ class MainActivity : ComponentActivity() {
         val splash = installSplashScreen()
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-
-        // Keep splash visible while checking access token
-        var accessChecked = false
-        splash.setKeepOnScreenCondition { !accessChecked }
+        splash.setKeepOnScreenCondition { false }
 
         setContent {
             Tera5GTheme {
+                var showSplash  by remember { mutableStateOf(true) }
                 var showPaywall by remember { mutableStateOf(false) }
 
-                LaunchedEffect(Unit) {
-                    viewModel.refreshAccess()
-                    accessChecked = true
-                }
-
-                if (showPaywall) {
-                    PaywallScreen(
-                        onAccessGranted = {
-                            showPaywall = false
+                AnimatedContent(
+                    targetState  = showSplash,
+                    transitionSpec = { fadeIn(tween(420)) togetherWith fadeOut(tween(420)) },
+                    label        = "root"
+                ) { isSplash ->
+                    if (isSplash) {
+                        SplashScreen {
                             viewModel.refreshAccess()
-                        },
-                        onDismiss = { showPaywall = false }
-                    )
-                } else {
-                    HomeScreen(
-                        viewModel = viewModel,
-                        onPaywallRequested = { showPaywall = true }
-                    )
+                            showSplash = false
+                        }
+                    } else {
+                        if (showPaywall) {
+                            PaywallScreen(
+                                onAccessGranted = { showPaywall = false; viewModel.refreshAccess() },
+                                onDismiss       = { showPaywall = false }
+                            )
+                        } else {
+                            HomeScreen(
+                                viewModel         = viewModel,
+                                onPaywallRequested = { showPaywall = true }
+                            )
+                        }
+                    }
                 }
             }
         }

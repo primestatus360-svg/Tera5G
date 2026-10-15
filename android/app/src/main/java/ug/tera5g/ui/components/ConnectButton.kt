@@ -2,15 +2,14 @@ package ug.tera5g.ui.components
 
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Shield
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
+import androidx.compose.material.icons.outlined.Language
+import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -29,40 +28,42 @@ fun ConnectButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val isConnected    = state == VpnState.CONNECTED
-    val isConnecting   = state == VpnState.CONNECTING || state == VpnState.FINDING_SERVER
+    val isConnected  = state == VpnState.CONNECTED
+    val isConnecting = state == VpnState.CONNECTING || state == VpnState.FINDING_SERVER
 
-    val buttonColor = when {
-        isConnected  -> ConnectedGreen
+    val infinite = rememberInfiniteTransition(label = "btn")
+
+    // Radar pulse (connecting)
+    val pulse by infinite.animateFloat(
+        0f, 1f,
+        infiniteRepeatable(tween(1300, easing = LinearEasing), RepeatMode.Restart),
+        "pulse"
+    )
+
+    // Glow breathe (connected)
+    val breathe by infinite.animateFloat(
+        0.15f, 0.30f,
+        infiniteRepeatable(tween(2000, easing = EaseInOutSine), RepeatMode.Reverse),
+        "breathe"
+    )
+
+    // Scale spring on state change
+    val buttonScale by animateFloatAsState(
+        targetValue   = if (isConnected) 1.05f else 1f,
+        animationSpec = spring(Spring.DampingRatioMediumBouncy, Spring.StiffnessMediumLow),
+        label = "scale"
+    )
+
+    val iconTint = when {
+        isConnected  -> NeonGreen
         isConnecting -> ConnectingBlue
         else         -> DisconnectedGray
     }
-
-    // Pulse animation when connecting
-    val infiniteTransition = rememberInfiniteTransition(label = "pulse")
-    val pulseScale by infiniteTransition.animateFloat(
-        initialValue = 1f,
-        targetValue  = if (isConnecting) 1.08f else 1f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(900, easing = EaseInOutSine),
-            repeatMode = RepeatMode.Reverse
-        ), label = "pulseScale"
-    )
-    val pulseAlpha by infiniteTransition.animateFloat(
-        initialValue = 0.4f,
-        targetValue  = if (isConnecting) 0.0f else 0.4f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(900, easing = EaseInOutSine),
-            repeatMode = RepeatMode.Reverse
-        ), label = "pulseAlpha"
-    )
-
-    // Glow ring when connected
-    val glowScale by animateFloatAsState(
-        targetValue  = if (isConnected) 1.18f else 1f,
-        animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
-        label        = "glowScale"
-    )
+    val ringColor = when {
+        isConnected  -> NeonGreen
+        isConnecting -> ConnectingBlue
+        else         -> DarkOutline
+    }
 
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -70,88 +71,89 @@ fun ConnectButton(
     ) {
         Box(
             contentAlignment = Alignment.Center,
-            modifier = Modifier.size(200.dp)
+            modifier = Modifier.size(224.dp).scale(buttonScale)
         ) {
-            // Outer glow ring (connected state)
+            // Connected glow halo
             if (isConnected) {
                 Box(
                     Modifier
-                        .size(200.dp)
-                        .scale(glowScale)
-                        .background(
-                            color  = ConnectedGreen.copy(alpha = 0.15f),
-                            shape  = CircleShape
-                        )
+                        .size(224.dp)
+                        .background(NeonGreen.copy(breathe), CircleShape)
                 )
             }
 
-            // Pulse ring (connecting state)
+            // Radar rings (connecting) — two rings offset by 50% phase
             if (isConnecting) {
-                Box(
-                    Modifier
-                        .size(200.dp)
-                        .scale(pulseScale)
-                        .alpha(pulseAlpha)
-                        .background(
-                            color  = ConnectingBlue.copy(alpha = 0.25f),
-                            shape  = CircleShape
-                        )
-                )
+                listOf(pulse, (pulse + 0.5f) % 1f).forEach { p ->
+                    Box(
+                        Modifier
+                            .size(200.dp)
+                            .scale(0.55f + p * 0.95f)
+                            .alpha((1f - p) * 0.55f)
+                            .background(ConnectingBlue.copy(0.28f), CircleShape)
+                    )
+                }
             }
 
-            // Middle ring
+            // Outer ring
             Box(
                 contentAlignment = Alignment.Center,
                 modifier = Modifier
-                    .size(176.dp)
+                    .size(186.dp)
                     .shadow(
-                        elevation = if (isConnected) 16.dp else 6.dp,
-                        shape     = CircleShape,
-                        ambientColor  = buttonColor.copy(alpha = 0.3f),
-                        spotColor     = buttonColor.copy(alpha = 0.3f)
+                        elevation     = if (isConnected) 22.dp else 8.dp,
+                        shape         = CircleShape,
+                        ambientColor  = ringColor.copy(if (isConnected) 0.35f else 0.15f),
+                        spotColor     = ringColor.copy(if (isConnected) 0.35f else 0.15f)
                     )
-                    .background(
-                        color  = if (isConnected) ConnectedGreen.copy(0.12f)
-                                 else MaterialTheme.colorScheme.surface,
-                        shape  = CircleShape
-                    )
+                    .background(DarkSurface, CircleShape)
             ) {
-                // Inner button
+                // Inner clickable circle
                 Box(
                     contentAlignment = Alignment.Center,
                     modifier = Modifier
-                        .size(148.dp)
-                        .background(color = buttonColor, shape = CircleShape)
+                        .size(156.dp)
+                        .background(
+                            color = when {
+                                isConnected  -> NeonGreen.copy(0.14f)
+                                isConnecting -> ConnectingBlue.copy(0.10f)
+                                else         -> DarkSurfaceVariant
+                            },
+                            shape = CircleShape
+                        )
+                        .border(
+                            width = if (isConnected) 2.5.dp else 1.5.dp,
+                            color = ringColor.copy(if (isConnected) 1f else 0.55f),
+                            shape = CircleShape
+                        )
                         .clickable(
                             interactionSource = remember { MutableInteractionSource() },
                             indication = null,
-                            onClick = onClick
+                            onClick    = onClick
                         )
                 ) {
                     Icon(
-                        imageVector = Icons.Default.Shield,
-                        contentDescription = "Connect",
-                        tint = Color.White,
-                        modifier = Modifier.size(52.dp)
+                        imageVector        = Icons.Outlined.Language,
+                        contentDescription = "Connect / Disconnect",
+                        tint               = iconTint,
+                        modifier           = Modifier.size(58.dp)
                     )
                 }
             }
         }
 
-        Spacer(Modifier.height(20.dp))
+        Spacer(Modifier.height(22.dp))
 
         Text(
             text = when {
                 isConnected  -> "Protected"
-                isConnecting -> if (state == VpnState.FINDING_SERVER)
-                                    "Finding best connection…"
-                                else "Connecting…"
-                else         -> "Tap to Protect"
+                isConnecting -> if (state == VpnState.FINDING_SERVER) "Finding Server…" else "Connecting…"
+                else         -> "Tap to Connect"
             },
-            style = MaterialTheme.typography.headlineMedium,
+            style      = MaterialTheme.typography.displaySmall,
             fontWeight = FontWeight.SemiBold,
-            color = when {
-                isConnected  -> ConnectedGreen
+            color      = when {
+                isConnected  -> NeonGreen
                 isConnecting -> ConnectingBlue
                 else         -> MaterialTheme.colorScheme.onSurfaceVariant
             }

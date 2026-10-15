@@ -1,9 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <style name="Theme.Tera5G" parent="android:Theme.Material.Light.NoActionBar" />
+    <style name="Theme.Tera5G" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">#080F08</item>
+        <item name="android:statusBarColor">#080F08</item>
+        <item name="android:navigationBarColor">#080F08</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowLightNavigationBar">false</item>
+    </style>
     <style name="Theme.Tera5G.Splash" parent="Theme.SplashScreen">
-        <item name="windowSplashScreenBackground">#F2F2F7</item>
-        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_notification</item>
+        <item name="windowSplashScreenBackground">#011A01</item>
+        <item name="windowSplashScreenAnimatedIcon">@mipmap/ic_launcher_foreground</item>
+        <item name="windowSplashScreenIconBackgroundColor">#011A01</item>
         <item name="postSplashScreenTheme">@style/Theme.Tera5G</item>
     </style>
 </resources>

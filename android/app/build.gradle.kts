@@ -125,9 +125,6 @@ dependencies {
     // WorkManager for background tasks
     implementation("androidx.work:work-runtime-ktx:2.9.0")
 
-    // Lifecycle compose (collectAsStateWithLifecycle)
-    implementation("androidx.lifecycle:lifecycle-runtime-compose:2.8.1")
-
     // SSH tunnel
     implementation("com.trilead:trilead-ssh2:1.0.0-build222")
 }

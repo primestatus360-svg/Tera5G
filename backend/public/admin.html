@@ -3,396 +3,813 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Tera5G Admin</title>
+<title>Tera5G · Admin</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <script>
 tailwind.config = {
   theme: {
     extend: {
       colors: {
-        brand: { 400: '#38bdf8', 500: '#0ea5e9', 600: '#0284c7', 700: '#0369a1' }
-      }
+        g: {
+          50:  '#f0fdf4', 100: '#dcfce7', 200: '#bbf7d0',
+          300: '#86efac', 400: '#4ade80', 500: '#1CE660',
+          600: '#16a34a', 700: '#15803d', 800: '#166534', 900: '#14532d',
+        }
+      },
+      fontFamily: { sans: ['-apple-system','BlinkMacSystemFont','Inter','Segoe UI','sans-serif'] }
     }
   }
 }
 </script>
 <style>
-  [x-cloak] { display: none !important; }
-  .spin { animation: spin 1s linear infinite; }
+  :root {
+    --bg:       #070c07;
+    --surf:     #0d160d;
+    --surf2:    #122012;
+    --border:   rgba(28,230,96,.10);
+    --border2:  rgba(28,230,96,.22);
+    --accent:   #1CE660;
+    --text1:    #e2f0e4;
+    --text2:    #7a9c7e;
+    --red:      #f87171;
+    --yellow:   #fbbf24;
+  }
+  * { box-sizing: border-box; margin: 0; }
+  body { background: var(--bg); color: var(--text1); font-family: -apple-system,BlinkMacSystemFont,'Inter','Segoe UI',sans-serif; min-height: 100vh; }
+  [x-cloak] { display:none!important; }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 5px; height: 5px; }
+  ::-webkit-scrollbar-track { background: var(--surf); }
+  ::-webkit-scrollbar-thumb { background: var(--surf2); border-radius: 4px; }
+
+  /* Glow effects */
+  .glow-green { box-shadow: 0 0 24px rgba(28,230,96,.18), 0 0 6px rgba(28,230,96,.08); }
+  .glow-text  { text-shadow: 0 0 20px rgba(28,230,96,.4); }
+
+  /* Spinner */
+  .spin { animation: spin .8s linear infinite; }
   @keyframes spin { to { transform: rotate(360deg); } }
-  ::-webkit-scrollbar { width: 6px; }
-  ::-webkit-scrollbar-track { background: #1e293b; }
-  ::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
+
+  /* Fade/slide animations */
+  @keyframes fadeUp   { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:none; } }
+  @keyframes slideIn  { from { opacity:0; transform:translateX(24px); } to { opacity:1; transform:none; } }
+  @keyframes pulse    { 0%,100% { opacity:1; } 50% { opacity:.5; } }
+  .anim-up   { animation: fadeUp  .3s ease both; }
+  .anim-in   { animation: slideIn .3s ease both; }
+  .pulse     { animation: pulse 2s ease-in-out infinite; }
+
+  /* Sidebar nav item */
+  .nav-item { display:flex; align-items:center; gap:10px; padding:9px 12px; border-radius:10px;
+              font-size:.875rem; font-weight:500; color:var(--text2); cursor:pointer;
+              transition: all .15s; border:1px solid transparent; width:100%; background:none; }
+  .nav-item:hover { background: rgba(28,230,96,.07); color:var(--text1); }
+  .nav-item.active { background: rgba(28,230,96,.12); color:var(--accent); border-color:var(--border); }
+
+  /* Card */
+  .card { background:var(--surf); border:1px solid var(--border); border-radius:16px; }
+  .card:hover { border-color:var(--border2); transition:border-color .2s; }
+
+  /* Input */
+  .inp { background:var(--bg); border:1px solid var(--border2); border-radius:10px;
+         padding:11px 14px; color:var(--text1); font-size:.875rem; width:100%;
+         transition: border-color .15s, box-shadow .15s; outline:none; }
+  .inp:focus { border-color:var(--accent); box-shadow:0 0 0 3px rgba(28,230,96,.12); }
+  .inp::placeholder { color:var(--text2); }
+
+  /* Button variants */
+  .btn { display:inline-flex; align-items:center; justify-content:center; gap:6px;
+         font-weight:600; font-size:.875rem; border-radius:10px; cursor:pointer;
+         padding:10px 18px; transition: all .15s; border:none; }
+  .btn-primary { background:var(--accent); color:#030f06; }
+  .btn-primary:hover { filter:brightness(1.08); box-shadow:0 0 16px rgba(28,230,96,.3); }
+  .btn-primary:disabled { opacity:.45; cursor:not-allowed; filter:none; box-shadow:none; }
+  .btn-ghost  { background:var(--surf2); color:var(--text1); border:1px solid var(--border); }
+  .btn-ghost:hover  { border-color:var(--border2); }
+  .btn-danger { background:rgba(248,113,113,.12); color:var(--red); border:1px solid rgba(248,113,113,.2); }
+  .btn-danger:hover { background:rgba(248,113,113,.2); }
+
+  /* Toggle switch */
+  .toggle-track { position:relative; display:inline-block; width:52px; height:28px; border-radius:999px;
+                  transition: background .2s; cursor:pointer; border:none; }
+  .toggle-track.on  { background:var(--accent); box-shadow:0 0 12px rgba(28,230,96,.4); }
+  .toggle-track.off { background:var(--surf2); border:1px solid var(--border2); }
+  .toggle-thumb { position:absolute; top:3px; width:22px; height:22px; border-radius:50%;
+                  background:#fff; transition: left .2s cubic-bezier(.4,0,.2,1), box-shadow .2s; }
+  .toggle-track.on  .toggle-thumb { left:27px; box-shadow:0 1px 4px rgba(0,0,0,.3); }
+  .toggle-track.off .toggle-thumb { left:3px;  box-shadow:0 1px 4px rgba(0,0,0,.5); }
+
+  /* Badge */
+  .badge { display:inline-flex; align-items:center; font-size:.7rem; font-weight:600;
+           padding:2px 8px; border-radius:999px; text-transform:uppercase; letter-spacing:.04em; }
+  .badge-green  { background:rgba(28,230,96,.14);  color:var(--accent); }
+  .badge-yellow { background:rgba(251,191,36,.14); color:var(--yellow); }
+  .badge-red    { background:rgba(248,113,113,.14); color:var(--red); }
+  .badge-gray   { background:var(--surf2); color:var(--text2); }
+
+  /* Table */
+  .tbl { width:100%; border-collapse:collapse; font-size:.8rem; }
+  .tbl thead th { padding:10px 16px; text-align:left; font-size:.68rem; font-weight:700;
+                  text-transform:uppercase; letter-spacing:.06em; color:var(--text2);
+                  border-bottom:1px solid var(--border); white-space:nowrap; }
+  .tbl tbody tr { border-bottom:1px solid rgba(28,230,96,.05); transition:background .12s; }
+  .tbl tbody tr:hover { background:rgba(28,230,96,.04); }
+  .tbl tbody td { padding:12px 16px; color:var(--text1); }
+  .tbl tbody tr:last-child { border-bottom:none; }
+
+  /* Skeleton shimmer */
+  @keyframes shimmer { 0% { background-position:-400px 0; } 100% { background-position:400px 0; } }
+  .skeleton { background:linear-gradient(90deg, var(--surf) 25%, var(--surf2) 50%, var(--surf) 75%);
+              background-size:800px 100%; animation:shimmer 1.4s ease-in-out infinite; border-radius:6px; }
+
+  /* Toast */
+  #toasts { position:fixed; top:20px; right:20px; z-index:9999; display:flex; flex-direction:column; gap:8px; pointer-events:none; }
+  .toast { display:flex; align-items:center; gap:10px; padding:12px 16px; border-radius:12px;
+           background:var(--surf2); border:1px solid var(--border2); min-width:260px; max-width:360px;
+           box-shadow:0 8px 32px rgba(0,0,0,.5); pointer-events:all;
+           animation:slideIn .25s ease both; font-size:.85rem; }
+  .toast-success { border-color:rgba(28,230,96,.3); }
+  .toast-error   { border-color:rgba(248,113,113,.3); }
+
+  /* Stat card number */
+  .stat-num { font-size:2rem; font-weight:800; letter-spacing:-.03em; line-height:1; }
+
+  /* Section header */
+  .section-head { font-size:1.25rem; font-weight:700; color:var(--text1); }
+
+  /* Modal */
+  .modal-bg { position:fixed; inset:0; background:rgba(0,0,0,.7); backdrop-filter:blur(4px);
+              display:flex; align-items:center; justify-content:center; z-index:50; padding:16px; }
+  .modal { background:var(--surf); border:1px solid var(--border2); border-radius:20px;
+           padding:28px; width:100%; max-width:420px; box-shadow:0 24px 64px rgba(0,0,0,.6); }
 </style>
 </head>
-<body class="bg-slate-950 text-slate-100 min-h-screen font-sans" x-data="app()" x-init="init()" x-cloak>
 
-<!-- LOGIN ─────────────────────────────────────────────────────────────────── -->
-<div x-show="!authed" class="flex items-center justify-center min-h-screen p-4">
-  <div class="w-full max-w-sm">
-    <div class="text-center mb-8">
-      <div class="text-4xl font-black text-brand-400 tracking-tight">TERA5G</div>
-      <div class="text-slate-400 text-sm mt-1">Admin Console</div>
-    </div>
-    <div class="bg-slate-800 rounded-2xl p-6 shadow-2xl border border-slate-700">
-      <div class="mb-4">
-        <label class="block text-xs font-semibold text-slate-400 mb-1.5 uppercase tracking-widest">Admin Key</label>
-        <input
-          x-model="loginKey"
-          type="password"
-          placeholder="Enter admin key"
-          @keydown.enter="login()"
-          class="w-full bg-slate-900 border border-slate-600 rounded-xl px-4 py-3 text-slate-100 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition"
-        />
+<!-- ─── TOASTS ──────────────────────────────────────────────────────────────── -->
+<div id="toasts"></div>
+
+<body x-data="app()" x-init="init()" x-cloak>
+
+<!-- ═══════════════════════════════ LOGIN ═══════════════════════════════════ -->
+<div x-show="!authed" style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;">
+  <div style="width:100%;max-width:360px;" class="anim-up">
+
+    <!-- Logo mark -->
+    <div style="text-align:center;margin-bottom:36px;">
+      <div style="display:inline-flex;align-items:center;justify-content:center;
+                  width:64px;height:64px;border-radius:18px;background:rgba(28,230,96,.12);
+                  border:1px solid rgba(28,230,96,.25);margin-bottom:16px;">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none">
+          <path d="M12 2L2 7l10 5 10-5-10-5z" stroke="#1CE660" stroke-width="1.8" stroke-linejoin="round"/>
+          <path d="M2 17l10 5 10-5" stroke="#1CE660" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" opacity=".6"/>
+          <path d="M2 12l10 5 10-5" stroke="#1CE660" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" opacity=".3"/>
+        </svg>
       </div>
-      <div x-show="loginErr" class="text-red-400 text-xs mb-3" x-text="loginErr"></div>
-      <button
-        @click="login()"
-        :disabled="loginBusy"
-        class="w-full bg-brand-600 hover:bg-brand-500 disabled:opacity-50 text-white font-semibold py-3 rounded-xl transition flex items-center justify-center gap-2"
-      >
-        <svg x-show="loginBusy" class="spin h-4 w-4" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/></svg>
+      <div style="font-size:1.6rem;font-weight:800;letter-spacing:-.02em;color:var(--text1);">Tera5G</div>
+      <div style="font-size:.8rem;color:var(--text2);margin-top:4px;letter-spacing:.08em;text-transform:uppercase;">Admin Console</div>
+    </div>
+
+    <div class="card" style="padding:28px;">
+      <label style="display:block;font-size:.72rem;font-weight:700;color:var(--text2);
+                    text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;">Admin Key</label>
+      <input class="inp" x-model="loginKey" type="password" placeholder="Enter your admin key"
+             @keydown.enter="login()" style="margin-bottom:16px;" />
+      <div x-show="loginErr" style="font-size:.8rem;color:var(--red);margin-bottom:12px;padding:10px 12px;
+           background:rgba(248,113,113,.08);border-radius:8px;border:1px solid rgba(248,113,113,.2);"
+           x-text="loginErr"></div>
+      <button class="btn btn-primary" @click="login()" :disabled="loginBusy" style="width:100%;padding:13px;">
+        <svg x-show="loginBusy" class="spin" width="16" height="16" fill="none" viewBox="0 0 24 24">
+          <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" opacity=".25"/>
+          <path d="M4 12a8 8 0 018-8" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
+        </svg>
         <span x-text="loginBusy ? 'Verifying…' : 'Sign In'"></span>
       </button>
     </div>
   </div>
 </div>
 
-<!-- MAIN APP ────────────────────────────────────────────────────────────────── -->
-<div x-show="authed" class="flex min-h-screen">
+<!-- ═══════════════════════════════ MAIN APP ════════════════════════════════ -->
+<div x-show="authed" style="display:flex;min-height:100vh;">
 
-  <!-- Sidebar -->
-  <aside class="w-56 bg-slate-900 border-r border-slate-800 flex flex-col shrink-0">
-    <div class="px-5 py-5 border-b border-slate-800">
-      <div class="text-xl font-black text-brand-400 tracking-tight">TERA5G</div>
-      <div class="text-xs text-slate-500 mt-0.5">Admin Console</div>
+  <!-- ── Sidebar ─────────────────────────────────────────────────────────── -->
+  <aside style="width:220px;background:var(--surf);border-right:1px solid var(--border);
+                display:flex;flex-direction:column;flex-shrink:0;position:sticky;top:0;height:100vh;">
+
+    <!-- Brand -->
+    <div style="padding:22px 18px 18px;border-bottom:1px solid var(--border);">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div style="width:32px;height:32px;border-radius:8px;background:rgba(28,230,96,.15);
+                    border:1px solid rgba(28,230,96,.25);display:flex;align-items:center;justify-content:center;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+            <path d="M12 2L2 7l10 5 10-5-10-5z" stroke="#1CE660" stroke-width="2" stroke-linejoin="round"/>
+            <path d="M2 17l10 5 10-5M2 12l10 5 10-5" stroke="#1CE660" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" opacity=".5"/>
+          </svg>
+        </div>
+        <div>
+          <div style="font-size:.95rem;font-weight:800;letter-spacing:-.01em;color:var(--text1);">Tera5G</div>
+          <div style="font-size:.65rem;color:var(--text2);letter-spacing:.06em;text-transform:uppercase;">Admin</div>
+        </div>
+      </div>
     </div>
-    <nav class="flex-1 p-3 space-y-1">
-      <template x-for="tab in tabs" :key="tab.id">
-        <button
-          @click="active = tab.id"
-          :class="active === tab.id ? 'bg-brand-600 text-white' : 'text-slate-400 hover:bg-slate-800 hover:text-slate-100'"
-          class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition"
-        >
-          <span x-html="tab.icon" class="w-5 h-5 shrink-0"></span>
-          <span x-text="tab.label"></span>
+
+    <!-- Nav -->
+    <nav style="flex:1;padding:12px 10px;display:flex;flex-direction:column;gap:2px;overflow-y:auto;">
+      <template x-for="t in tabs" :key="t.id">
+        <button class="nav-item" :class="active===t.id && 'active'" @click="switchTab(t.id)">
+          <span x-html="t.icon" style="width:18px;height:18px;flex-shrink:0;"></span>
+          <span x-text="t.label"></span>
+          <span x-show="t.id==='settings' && paywallEnabled===false"
+                style="margin-left:auto;width:6px;height:6px;border-radius:50%;background:var(--accent);"></span>
         </button>
       </template>
     </nav>
-    <div class="p-3 border-t border-slate-800">
-      <button @click="logout()" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-slate-400 hover:bg-slate-800 hover:text-red-400 transition">
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+
+    <!-- Footer -->
+    <div style="padding:10px;border-top:1px solid var(--border);">
+      <div style="padding:8px 12px;margin-bottom:6px;font-size:.72rem;color:var(--text2);
+                  background:rgba(28,230,96,.05);border-radius:8px;border:1px solid var(--border);">
+        <div style="font-weight:600;margin-bottom:2px;color:var(--text1);">Paywall</div>
+        <div x-text="paywallEnabled ? '🔒 Enabled' : '🟢 Disabled (free)'"
+             :style="paywallEnabled ? '' : 'color:var(--accent)'"></div>
+      </div>
+      <button class="nav-item" @click="logout()" style="color:var(--red);">
+        <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
+        </svg>
         Sign Out
       </button>
     </div>
   </aside>
 
-  <!-- Content -->
-  <main class="flex-1 overflow-auto">
+  <!-- ── Main content ────────────────────────────────────────────────────── -->
+  <main style="flex:1;overflow:auto;padding:32px;max-width:1100px;">
 
-    <!-- DASHBOARD ─────────────────────────────────────────────────────────── -->
-    <div x-show="active === 'dashboard'" class="p-6 space-y-6">
-      <div class="flex items-center justify-between">
-        <h1 class="text-2xl font-bold">Dashboard</h1>
-        <button @click="loadStats()" class="text-xs text-brand-400 hover:text-brand-300 flex items-center gap-1">
-          <svg :class="statsLoading && 'spin'" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+    <!-- ══ DASHBOARD ══════════════════════════════════════════════════════ -->
+    <div x-show="active==='dashboard'" class="anim-up" style="display:flex;flex-direction:column;gap:24px;">
+
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;">
+        <h1 class="section-head">Dashboard</h1>
+        <button class="btn btn-ghost" @click="loadStats()" style="font-size:.78rem;padding:8px 14px;">
+          <svg :class="statsLoading && 'spin'" width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M4 4v5h5M20 20v-5h-5M20 9A8 8 0 005.3 5.3M4 15a8 8 0 0014.7 3.7"/>
+          </svg>
           Refresh
         </button>
       </div>
-      <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <div class="bg-slate-800 rounded-2xl p-5 border border-slate-700">
-          <div class="text-slate-400 text-xs font-semibold uppercase tracking-widest mb-1">Active Devices</div>
-          <div class="text-3xl font-black text-brand-400" x-text="stats.activeDevices ?? '—'"></div>
+
+      <!-- Stat cards -->
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:16px;">
+
+        <div class="card" style="padding:22px 20px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+            <span style="font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--text2);">Active Devices</span>
+            <div style="width:32px;height:32px;border-radius:8px;background:rgba(28,230,96,.1);display:flex;align-items:center;justify-content:center;">
+              <svg width="15" height="15" fill="none" stroke="#1CE660" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"/>
+              </svg>
+            </div>
+          </div>
+          <div class="stat-num" style="color:var(--accent);" x-text="stats.activeDevices ?? '—'"></div>
         </div>
-        <div class="bg-slate-800 rounded-2xl p-5 border border-slate-700">
-          <div class="text-slate-400 text-xs font-semibold uppercase tracking-widest mb-1">Total Payments</div>
-          <div class="text-3xl font-black text-white" x-text="stats.totalPayments ?? '—'"></div>
+
+        <div class="card" style="padding:22px 20px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+            <span style="font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--text2);">Total Payments</span>
+            <div style="width:32px;height:32px;border-radius:8px;background:rgba(99,179,237,.1);display:flex;align-items:center;justify-content:center;">
+              <svg width="15" height="15" fill="none" stroke="#63b3ed" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/>
+              </svg>
+            </div>
+          </div>
+          <div class="stat-num" style="color:#63b3ed;" x-text="stats.totalPayments ?? '—'"></div>
         </div>
-        <div class="bg-slate-800 rounded-2xl p-5 border border-slate-700">
-          <div class="text-slate-400 text-xs font-semibold uppercase tracking-widest mb-1">Revenue (UGX)</div>
-          <div class="text-3xl font-black text-green-400" x-text="stats.revenueUGX != null ? fmtNum(stats.revenueUGX) : '—'"></div>
+
+        <div class="card" style="padding:22px 20px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+            <span style="font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--text2);">Revenue (UGX)</span>
+            <div style="width:32px;height:32px;border-radius:8px;background:rgba(251,191,36,.1);display:flex;align-items:center;justify-content:center;">
+              <svg width="15" height="15" fill="none" stroke="#fbbf24" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+              </svg>
+            </div>
+          </div>
+          <div class="stat-num" style="color:#fbbf24;" x-text="stats.revenueUGX != null ? fmtNum(stats.revenueUGX) : '—'"></div>
         </div>
-        <div class="bg-slate-800 rounded-2xl p-5 border border-slate-700">
-          <div class="text-slate-400 text-xs font-semibold uppercase tracking-widest mb-1">Last 24h</div>
-          <div class="text-3xl font-black text-yellow-400" x-text="stats.paymentsLast24h ?? '—'"></div>
+
+        <div class="card" style="padding:22px 20px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+            <span style="font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--text2);">Last 24h</span>
+            <div style="width:32px;height:32px;border-radius:8px;background:rgba(167,139,250,.1);display:flex;align-items:center;justify-content:center;">
+              <svg width="15" height="15" fill="none" stroke="#a78bfa" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/>
+              </svg>
+            </div>
+          </div>
+          <div class="stat-num" style="color:#a78bfa;" x-text="stats.paymentsLast24h ?? '—'"></div>
+        </div>
+
+      </div>
+
+      <!-- ── Paywall Hero Toggle ── -->
+      <div class="card" style="padding:28px;border-color:rgba(28,230,96,.18);"
+           :style="!paywallEnabled && 'box-shadow:0 0 32px rgba(28,230,96,.08);'">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:24px;flex-wrap:wrap;">
+          <div>
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
+              <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                   :stroke="paywallEnabled ? 'var(--text2)' : 'var(--accent)'">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  x-show="paywallEnabled"
+                  d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  x-show="!paywallEnabled"
+                  d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z"/>
+              </svg>
+              <span style="font-size:1.05rem;font-weight:700;color:var(--text1);">Paywall Control</span>
+              <span :class="paywallEnabled ? 'badge-gray' : 'badge-green'" class="badge"
+                    x-text="paywallEnabled ? 'ENABLED' : 'DISABLED'"></span>
+            </div>
+            <p style="font-size:.82rem;color:var(--text2);max-width:420px;"
+               x-text="paywallEnabled
+                 ? 'Users must complete payment before they can connect to VPN.'
+                 : 'Paywall is OFF — all users connect for free. Toggle on to require payment.'">
+            </p>
+          </div>
+          <div style="display:flex;align-items:center;gap:14px;">
+            <span style="font-size:.8rem;color:var(--text2);" x-text="paywallEnabled ? 'Paid only' : 'Free access'"></span>
+            <button class="toggle-track" :class="paywallEnabled ? 'on' : 'off'"
+                    @click="togglePaywall()" :disabled="paywallBusy">
+              <span class="toggle-thumb"></span>
+            </button>
+          </div>
+        </div>
+        <div x-show="paywallBusy" style="margin-top:12px;font-size:.78rem;color:var(--text2);display:flex;align-items:center;gap:6px;">
+          <svg class="spin" width="12" height="12" fill="none" viewBox="0 0 24 24">
+            <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" opacity=".25"/>
+            <path d="M4 12a8 8 0 018-8" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
+          </svg>
+          Saving…
         </div>
       </div>
 
-      <!-- Paywall quick toggle -->
-      <div class="bg-slate-800 rounded-2xl p-5 border border-slate-700 flex items-center justify-between">
-        <div>
-          <div class="font-semibold text-sm">Paywall</div>
-          <div class="text-xs text-slate-400 mt-0.5" x-text="paywallEnabled ? 'Users must pay to connect.' : 'All users connect for free.'"></div>
-        </div>
-        <button
-          @click="togglePaywall()"
-          :class="paywallEnabled ? 'bg-brand-600' : 'bg-slate-600'"
-          class="relative inline-flex h-7 w-12 items-center rounded-full transition focus:outline-none"
-        >
-          <span :class="paywallEnabled ? 'translate-x-6' : 'translate-x-1'" class="inline-block h-5 w-5 transform bg-white rounded-full transition"></span>
-        </button>
-      </div>
     </div>
 
-    <!-- PAYMENTS ──────────────────────────────────────────────────────────── -->
-    <div x-show="active === 'payments'" class="p-6 space-y-4">
-      <div class="flex items-center justify-between gap-3 flex-wrap">
-        <h1 class="text-2xl font-bold">Payments</h1>
-        <div class="flex items-center gap-2">
-          <select x-model="pFilter" @change="pPage=1; loadPayments()" class="bg-slate-800 border border-slate-600 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-brand-500">
-            <option value="all">All</option>
+    <!-- ══ PAYMENTS ═══════════════════════════════════════════════════════ -->
+    <div x-show="active==='payments'" class="anim-up" style="display:flex;flex-direction:column;gap:20px;">
+
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+        <h1 class="section-head">Payments</h1>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <select class="inp" x-model="pFilter" @change="pPage=1; loadPayments()" style="width:auto;padding:8px 12px;">
+            <option value="all">All statuses</option>
             <option value="pending">Pending</option>
             <option value="active">Active</option>
             <option value="failed">Failed</option>
           </select>
-          <button @click="loadPayments()" class="bg-slate-800 hover:bg-slate-700 border border-slate-600 rounded-xl px-3 py-2 text-sm transition">Refresh</button>
-        </div>
-      </div>
-      <div class="bg-slate-800 rounded-2xl border border-slate-700 overflow-hidden">
-        <div class="overflow-x-auto">
-          <table class="w-full text-sm">
-            <thead>
-              <tr class="border-b border-slate-700 text-slate-400 text-xs uppercase tracking-wider">
-                <th class="text-left px-4 py-3">Reference</th>
-                <th class="text-left px-4 py-3">Device</th>
-                <th class="text-left px-4 py-3">Plan</th>
-                <th class="text-left px-4 py-3">Amount</th>
-                <th class="text-left px-4 py-3">Provider</th>
-                <th class="text-left px-4 py-3">Status</th>
-                <th class="text-left px-4 py-3">Date</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr x-show="paymentsLoading">
-                <td colspan="7" class="text-center py-8 text-slate-400">Loading…</td>
-              </tr>
-              <tr x-show="!paymentsLoading && payments.length === 0">
-                <td colspan="7" class="text-center py-8 text-slate-500">No payments found</td>
-              </tr>
-              <template x-for="p in payments" :key="p.tx_ref">
-                <tr class="border-b border-slate-700/50 hover:bg-slate-700/30 transition">
-                  <td class="px-4 py-3 font-mono text-xs text-slate-300" x-text="p.tx_ref.slice(0,20)+'…'"></td>
-                  <td class="px-4 py-3 font-mono text-xs text-slate-400" x-text="p.device_id.slice(0,8)+'…'"></td>
-                  <td class="px-4 py-3">
-                    <span class="bg-slate-700 text-xs px-2 py-0.5 rounded-full" x-text="p.plan"></span>
-                  </td>
-                  <td class="px-4 py-3 text-green-400" x-text="fmtNum(p.amount) + ' UGX'"></td>
-                  <td class="px-4 py-3 text-slate-300" x-text="p.provider"></td>
-                  <td class="px-4 py-3">
-                    <span :class="{
-                      'bg-green-500/20 text-green-400': p.status === 'active',
-                      'bg-yellow-500/20 text-yellow-400': p.status === 'pending',
-                      'bg-red-500/20 text-red-400': p.status === 'failed'
-                    }" class="text-xs px-2 py-0.5 rounded-full font-medium" x-text="p.status"></span>
-                  </td>
-                  <td class="px-4 py-3 text-slate-400 text-xs" x-text="fmtDate(p.created_at)"></td>
-                </tr>
-              </template>
-            </tbody>
-          </table>
-        </div>
-        <div class="flex items-center justify-between px-4 py-3 border-t border-slate-700">
-          <span class="text-xs text-slate-400">Page <span x-text="pPage"></span></span>
-          <div class="flex gap-2">
-            <button @click="pPage--; loadPayments()" :disabled="pPage <= 1" class="text-xs px-3 py-1.5 rounded-lg bg-slate-700 hover:bg-slate-600 disabled:opacity-40 transition">Prev</button>
-            <button @click="pPage++; loadPayments()" :disabled="payments.length < 50" class="text-xs px-3 py-1.5 rounded-lg bg-slate-700 hover:bg-slate-600 disabled:opacity-40 transition">Next</button>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- DEVICES ───────────────────────────────────────────────────────────── -->
-    <div x-show="active === 'devices'" class="p-6 space-y-4">
-      <div class="flex items-center justify-between gap-3 flex-wrap">
-        <h1 class="text-2xl font-bold">Active Devices</h1>
-        <div class="flex items-center gap-2">
-          <button @click="showGrantModal = true" class="bg-brand-600 hover:bg-brand-500 text-white text-sm font-medium px-4 py-2 rounded-xl transition">+ Grant Access</button>
-          <button @click="loadDevices()" class="bg-slate-800 hover:bg-slate-700 border border-slate-600 rounded-xl px-3 py-2 text-sm transition">Refresh</button>
-        </div>
-      </div>
-      <div class="bg-slate-800 rounded-2xl border border-slate-700 overflow-hidden">
-        <div class="overflow-x-auto">
-          <table class="w-full text-sm">
-            <thead>
-              <tr class="border-b border-slate-700 text-slate-400 text-xs uppercase tracking-wider">
-                <th class="text-left px-4 py-3">Device ID</th>
-                <th class="text-left px-4 py-3">Plan</th>
-                <th class="text-left px-4 py-3">Expires</th>
-                <th class="text-left px-4 py-3">Provider</th>
-                <th class="text-left px-4 py-3"></th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr x-show="devicesLoading">
-                <td colspan="5" class="text-center py-8 text-slate-400">Loading…</td>
-              </tr>
-              <tr x-show="!devicesLoading && devices.length === 0">
-                <td colspan="5" class="text-center py-8 text-slate-500">No active devices</td>
-              </tr>
-              <template x-for="d in devices" :key="d.device_id">
-                <tr class="border-b border-slate-700/50 hover:bg-slate-700/30 transition">
-                  <td class="px-4 py-3 font-mono text-xs text-slate-300" x-text="d.device_id.slice(0,16)+'…'"></td>
-                  <td class="px-4 py-3">
-                    <span class="bg-slate-700 text-xs px-2 py-0.5 rounded-full" x-text="d.plan"></span>
-                  </td>
-                  <td class="px-4 py-3 text-xs" :class="d.expires_at < Date.now() + 3600000 ? 'text-red-400' : 'text-slate-300'" x-text="fmtDate(d.expires_at)"></td>
-                  <td class="px-4 py-3 text-slate-400" x-text="d.provider"></td>
-                  <td class="px-4 py-3">
-                    <button @click="revokeDevice(d.device_id)" class="text-xs text-red-400 hover:text-red-300 transition">Revoke</button>
-                  </td>
-                </tr>
-              </template>
-            </tbody>
-          </table>
-        </div>
-        <div class="flex items-center justify-between px-4 py-3 border-t border-slate-700">
-          <span class="text-xs text-slate-400">Page <span x-text="dPage"></span></span>
-          <div class="flex gap-2">
-            <button @click="dPage--; loadDevices()" :disabled="dPage <= 1" class="text-xs px-3 py-1.5 rounded-lg bg-slate-700 hover:bg-slate-600 disabled:opacity-40 transition">Prev</button>
-            <button @click="dPage++; loadDevices()" :disabled="devices.length < 50" class="text-xs px-3 py-1.5 rounded-lg bg-slate-700 hover:bg-slate-600 disabled:opacity-40 transition">Next</button>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- WITHDRAW ──────────────────────────────────────────────────────────── -->
-    <div x-show="active === 'withdraw'" class="p-6 space-y-4">
-      <h1 class="text-2xl font-bold">Withdraw Funds</h1>
-      <div class="max-w-md bg-slate-800 rounded-2xl p-6 border border-slate-700 space-y-4">
-        <div>
-          <label class="block text-xs font-semibold text-slate-400 mb-1.5 uppercase tracking-widest">Phone Number</label>
-          <input x-model="wd.phone" type="tel" placeholder="e.g. 0772000000" class="w-full bg-slate-900 border border-slate-600 rounded-xl px-4 py-3 text-slate-100 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition"/>
-        </div>
-        <div>
-          <label class="block text-xs font-semibold text-slate-400 mb-1.5 uppercase tracking-widest">Amount (UGX)</label>
-          <input x-model="wd.amount" type="number" placeholder="e.g. 10000" min="500" class="w-full bg-slate-900 border border-slate-600 rounded-xl px-4 py-3 text-slate-100 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition"/>
-        </div>
-        <div>
-          <label class="block text-xs font-semibold text-slate-400 mb-1.5 uppercase tracking-widest">Network</label>
-          <select x-model="wd.provider" class="w-full bg-slate-900 border border-slate-600 rounded-xl px-4 py-3 text-slate-100 focus:outline-none focus:border-brand-500 transition">
-            <option value="MTN">MTN Mobile Money</option>
-            <option value="AIRTEL">Airtel Money</option>
-          </select>
-        </div>
-        <div x-show="wd.msg" :class="wd.ok ? 'bg-green-500/10 border-green-500/30 text-green-400' : 'bg-red-500/10 border-red-500/30 text-red-400'" class="border rounded-xl px-4 py-3 text-sm" x-text="wd.msg"></div>
-        <button @click="withdraw()" :disabled="wd.busy" class="w-full bg-brand-600 hover:bg-brand-500 disabled:opacity-50 text-white font-semibold py-3 rounded-xl transition flex items-center justify-center gap-2">
-          <svg x-show="wd.busy" class="spin h-4 w-4" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/></svg>
-          <span x-text="wd.busy ? 'Processing…' : 'Withdraw'"></span>
-        </button>
-      </div>
-    </div>
-
-    <!-- CONFIG ────────────────────────────────────────────────────────────── -->
-    <div x-show="active === 'config'" class="p-6 space-y-4">
-      <h1 class="text-2xl font-bold">Server Config</h1>
-      <div class="max-w-2xl bg-slate-800 rounded-2xl p-6 border border-slate-700 space-y-4">
-        <div>
-          <label class="block text-xs font-semibold text-slate-400 mb-1.5 uppercase tracking-widest">JSON Config</label>
-          <textarea
-            x-model="cfg.json"
-            rows="14"
-            placeholder='{"servers":[{"name":"UG-1","address":"1.2.3.4","port":443,"protocol":"vless","uuid":"..."}]}'
-            class="w-full bg-slate-900 border border-slate-600 rounded-xl px-4 py-3 text-slate-100 font-mono text-xs focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition resize-y"
-          ></textarea>
-        </div>
-        <div x-show="cfg.msg" :class="cfg.ok ? 'bg-green-500/10 border-green-500/30 text-green-400' : 'bg-red-500/10 border-red-500/30 text-red-400'" class="border rounded-xl px-4 py-3 text-sm" x-text="cfg.msg"></div>
-        <button @click="pushConfig()" :disabled="cfg.busy" class="bg-brand-600 hover:bg-brand-500 disabled:opacity-50 text-white font-semibold px-6 py-3 rounded-xl transition flex items-center gap-2">
-          <svg x-show="cfg.busy" class="spin h-4 w-4" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/></svg>
-          <span x-text="cfg.busy ? 'Uploading…' : 'Push Config'"></span>
-        </button>
-      </div>
-    </div>
-
-    <!-- SETTINGS ──────────────────────────────────────────────────────────── -->
-    <div x-show="active === 'settings'" class="p-6 space-y-4">
-      <h1 class="text-2xl font-bold">Settings</h1>
-      <div class="max-w-md space-y-3">
-        <div class="bg-slate-800 rounded-2xl p-5 border border-slate-700 flex items-center justify-between">
-          <div>
-            <div class="font-semibold">Paywall</div>
-            <div class="text-xs text-slate-400 mt-0.5" x-text="paywallEnabled ? 'Enabled — users must pay to connect' : 'Disabled — all users connect for free'"></div>
-          </div>
-          <button
-            @click="togglePaywall()"
-            :class="paywallEnabled ? 'bg-brand-600' : 'bg-slate-600'"
-            class="relative inline-flex h-7 w-12 items-center rounded-full transition focus:outline-none"
-          >
-            <span :class="paywallEnabled ? 'translate-x-6' : 'translate-x-1'" class="inline-block h-5 w-5 transform bg-white rounded-full transition"></span>
+          <button class="btn btn-ghost" @click="loadPayments()" style="padding:8px 14px;font-size:.78rem;">
+            <svg :class="paymentsLoading && 'spin'" width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M4 4v5h5M20 20v-5h-5M20 9A8 8 0 005.3 5.3M4 15a8 8 0 0014.7 3.7"/>
+            </svg>
+            Refresh
           </button>
         </div>
-        <div x-show="settingsMsg" :class="settingsOk ? 'bg-green-500/10 border-green-500/30 text-green-400' : 'bg-red-500/10 border-red-500/30 text-red-400'" class="border rounded-xl px-4 py-3 text-sm" x-text="settingsMsg"></div>
+      </div>
+
+      <div class="card" style="overflow:hidden;">
+        <div style="overflow-x:auto;">
+          <table class="tbl">
+            <thead>
+              <tr>
+                <th>Reference</th>
+                <th>Device</th>
+                <th>Plan</th>
+                <th>Amount</th>
+                <th>Provider</th>
+                <th>Status</th>
+                <th>Date</th>
+              </tr>
+            </thead>
+            <tbody>
+              <!-- Loading skeleton -->
+              <template x-if="paymentsLoading">
+                <template x-for="i in 6" :key="i">
+                  <tr>
+                    <td colspan="7" style="padding:10px 16px;">
+                      <div class="skeleton" style="height:14px;width:100%;"></div>
+                    </td>
+                  </tr>
+                </template>
+              </template>
+              <!-- Empty state -->
+              <tr x-show="!paymentsLoading && payments.length===0">
+                <td colspan="7" style="text-align:center;padding:40px;color:var(--text2);">
+                  <svg width="32" height="32" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="margin:0 auto 10px;opacity:.3;display:block;">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/>
+                  </svg>
+                  No payments found
+                </td>
+              </tr>
+              <template x-for="p in payments" :key="p.tx_ref">
+                <tr>
+                  <td style="font-family:monospace;font-size:.75rem;color:var(--text2);"
+                      x-text="p.tx_ref.slice(0,18)+'…'"></td>
+                  <td style="font-family:monospace;font-size:.75rem;color:var(--text2);"
+                      x-text="p.device_id.slice(0,10)+'…'"></td>
+                  <td><span class="badge badge-gray" x-text="p.plan"></span></td>
+                  <td style="font-weight:600;color:var(--accent);" x-text="fmtNum(p.amount)+' UGX'"></td>
+                  <td style="color:var(--text1);" x-text="p.provider"></td>
+                  <td>
+                    <span :class="{
+                      'badge-green':  p.status==='active',
+                      'badge-yellow': p.status==='pending',
+                      'badge-red':    p.status==='failed'
+                    }" class="badge" x-text="p.status"></span>
+                  </td>
+                  <td style="color:var(--text2);white-space:nowrap;" x-text="fmtDate(p.created_at)"></td>
+                </tr>
+              </template>
+            </tbody>
+          </table>
+        </div>
+        <!-- Pagination -->
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-top:1px solid var(--border);">
+          <span style="font-size:.75rem;color:var(--text2);">
+            Page <strong x-text="pPage"></strong>
+            <span x-show="payments.length > 0"> · <span x-text="payments.length"></span> rows</span>
+          </span>
+          <div style="display:flex;gap:8px;">
+            <button class="btn btn-ghost" @click="pPage--;loadPayments()" :disabled="pPage<=1"
+                    style="padding:6px 12px;font-size:.75rem;">← Prev</button>
+            <button class="btn btn-ghost" @click="pPage++;loadPayments()" :disabled="payments.length<50"
+                    style="padding:6px 12px;font-size:.75rem;">Next →</button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ══ DEVICES ════════════════════════════════════════════════════════ -->
+    <div x-show="active==='devices'" class="anim-up" style="display:flex;flex-direction:column;gap:20px;">
+
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+        <h1 class="section-head">Active Devices</h1>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <button class="btn btn-primary" @click="showGrantModal=true" style="padding:8px 16px;font-size:.82rem;">
+            <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"/>
+            </svg>
+            Grant Access
+          </button>
+          <button class="btn btn-ghost" @click="loadDevices()" style="padding:8px 14px;font-size:.78rem;">
+            <svg :class="devicesLoading && 'spin'" width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M4 4v5h5M20 20v-5h-5M20 9A8 8 0 005.3 5.3M4 15a8 8 0 0014.7 3.7"/>
+            </svg>
+            Refresh
+          </button>
+        </div>
+      </div>
+
+      <div class="card" style="overflow:hidden;">
+        <div style="overflow-x:auto;">
+          <table class="tbl">
+            <thead>
+              <tr>
+                <th>Device ID</th>
+                <th>Plan</th>
+                <th>Expires</th>
+                <th>Provider</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              <template x-if="devicesLoading">
+                <template x-for="i in 5" :key="i">
+                  <tr>
+                    <td colspan="5" style="padding:10px 16px;">
+                      <div class="skeleton" style="height:14px;width:100%;"></div>
+                    </td>
+                  </tr>
+                </template>
+              </template>
+              <tr x-show="!devicesLoading && devices.length===0">
+                <td colspan="5" style="text-align:center;padding:40px;color:var(--text2);">
+                  <svg width="32" height="32" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="margin:0 auto 10px;opacity:.3;display:block;">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"/>
+                  </svg>
+                  No active devices
+                </td>
+              </tr>
+              <template x-for="d in devices" :key="d.device_id">
+                <tr>
+                  <td style="font-family:monospace;font-size:.75rem;color:var(--text2);"
+                      x-text="d.device_id.slice(0,20)+'…'"></td>
+                  <td><span class="badge badge-gray" x-text="d.plan"></span></td>
+                  <td :style="isExpiringSoon(d.expires_at) ? 'color:var(--yellow)' : 'color:var(--text1)'"
+                      style="font-size:.8rem;white-space:nowrap;">
+                    <span x-show="isExpiringSoon(d.expires_at)" style="margin-right:4px;">⚡</span>
+                    <span x-text="fmtDate(d.expires_at)"></span>
+                  </td>
+                  <td style="color:var(--text2);" x-text="d.provider"></td>
+                  <td style="text-align:right;">
+                    <button class="btn btn-danger" @click="revokeDevice(d.device_id)"
+                            style="padding:5px 12px;font-size:.75rem;">Revoke</button>
+                  </td>
+                </tr>
+              </template>
+            </tbody>
+          </table>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-top:1px solid var(--border);">
+          <span style="font-size:.75rem;color:var(--text2);">
+            Page <strong x-text="dPage"></strong>
+            <span x-show="devices.length > 0"> · <span x-text="devices.length"></span> devices</span>
+          </span>
+          <div style="display:flex;gap:8px;">
+            <button class="btn btn-ghost" @click="dPage--;loadDevices()" :disabled="dPage<=1"
+                    style="padding:6px 12px;font-size:.75rem;">← Prev</button>
+            <button class="btn btn-ghost" @click="dPage++;loadDevices()" :disabled="devices.length<50"
+                    style="padding:6px 12px;font-size:.75rem;">Next →</button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ══ WITHDRAW ═══════════════════════════════════════════════════════ -->
+    <div x-show="active==='withdraw'" class="anim-up" style="display:flex;flex-direction:column;gap:20px;">
+
+      <h1 class="section-head">Withdraw Funds</h1>
+
+      <div class="card" style="padding:28px;max-width:460px;display:flex;flex-direction:column;gap:18px;">
+
+        <div>
+          <label style="display:block;font-size:.72rem;font-weight:700;color:var(--text2);
+                        text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;">Phone Number</label>
+          <input class="inp" x-model="wd.phone" type="tel" placeholder="e.g. 0772 000 000" />
+        </div>
+
+        <div>
+          <label style="display:block;font-size:.72rem;font-weight:700;color:var(--text2);
+                        text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;">Amount (UGX)</label>
+          <input class="inp" x-model="wd.amount" type="number" placeholder="Minimum 500" min="500" />
+        </div>
+
+        <div>
+          <label style="display:block;font-size:.72rem;font-weight:700;color:var(--text2);
+                        text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;">Network</label>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+            <button @click="wd.provider='MTN'"
+                    :style="wd.provider==='MTN' ? 'border-color:var(--accent);background:rgba(28,230,96,.08);color:var(--text1);' : ''"
+                    class="btn btn-ghost" style="padding:12px;">
+              <span style="font-weight:700;">MTN</span> Money
+            </button>
+            <button @click="wd.provider='AIRTEL'"
+                    :style="wd.provider==='AIRTEL' ? 'border-color:var(--accent);background:rgba(28,230,96,.08);color:var(--text1);' : ''"
+                    class="btn btn-ghost" style="padding:12px;">
+              <span style="font-weight:700;">Airtel</span> Money
+            </button>
+          </div>
+        </div>
+
+        <div style="background:rgba(28,230,96,.05);border:1px solid var(--border);border-radius:10px;padding:12px 14px;font-size:.8rem;">
+          <span style="color:var(--text2);">Sending </span>
+          <strong style="color:var(--accent);" x-text="wd.amount ? fmtNum(wd.amount)+' UGX' : '—'"></strong>
+          <span style="color:var(--text2);"> to </span>
+          <strong style="color:var(--text1);" x-text="wd.phone || '—'"></strong>
+          <span style="color:var(--text2);"> via </span>
+          <strong style="color:var(--text1);" x-text="wd.provider"></strong>
+        </div>
+
+        <button class="btn btn-primary" @click="withdraw()" :disabled="wd.busy" style="padding:13px;">
+          <svg x-show="wd.busy" class="spin" width="16" height="16" fill="none" viewBox="0 0 24 24">
+            <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" opacity=".25"/>
+            <path d="M4 12a8 8 0 018-8" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
+          </svg>
+          <span x-text="wd.busy ? 'Processing…' : 'Initiate Withdrawal'"></span>
+        </button>
+
+      </div>
+    </div>
+
+    <!-- ══ VPN CONFIG ═════════════════════════════════════════════════════ -->
+    <div x-show="active==='config'" class="anim-up" style="display:flex;flex-direction:column;gap:20px;">
+
+      <h1 class="section-head">VPN Server Config</h1>
+
+      <div class="card" style="padding:28px;max-width:700px;display:flex;flex-direction:column;gap:18px;">
+
+        <div style="font-size:.82rem;color:var(--text2);background:rgba(28,230,96,.05);
+                    border:1px solid var(--border);border-radius:10px;padding:12px 14px;">
+          Push a new server config to the app. Must be a JSON object with a
+          <code style="background:var(--surf2);padding:1px 5px;border-radius:4px;font-size:.78rem;">servers</code>
+          array. Active devices fetch this on next connection.
+        </div>
+
+        <div>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+            <label style="font-size:.72rem;font-weight:700;color:var(--text2);
+                          text-transform:uppercase;letter-spacing:.08em;">JSON Config</label>
+            <button @click="cfg.json=cfgTemplate" class="btn btn-ghost"
+                    style="padding:4px 10px;font-size:.72rem;">Insert template</button>
+          </div>
+          <textarea class="inp" x-model="cfg.json" rows="16" spellcheck="false"
+                    style="font-family:monospace;font-size:.78rem;resize:vertical;"
+                    placeholder='{"servers":[{"name":"UG-1","address":"1.2.3.4","port":443,"protocol":"vless","uuid":"…"}]}'></textarea>
+        </div>
+
+        <div style="display:flex;align-items:center;gap:12px;">
+          <button class="btn btn-primary" @click="pushConfig()" :disabled="cfg.busy" style="padding:11px 22px;">
+            <svg x-show="cfg.busy" class="spin" width="15" height="15" fill="none" viewBox="0 0 24 24">
+              <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" opacity=".25"/>
+              <path d="M4 12a8 8 0 018-8" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
+            </svg>
+            <svg x-show="!cfg.busy" width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
+            </svg>
+            <span x-text="cfg.busy ? 'Pushing…' : 'Push Config'"></span>
+          </button>
+          <button class="btn btn-ghost" @click="cfg.json=''" style="padding:11px 16px;">Clear</button>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ══ SETTINGS ═══════════════════════════════════════════════════════ -->
+    <div x-show="active==='settings'" class="anim-up" style="display:flex;flex-direction:column;gap:20px;">
+
+      <h1 class="section-head">Settings</h1>
+
+      <div style="max-width:520px;display:flex;flex-direction:column;gap:14px;">
+
+        <!-- Paywall setting -->
+        <div class="card" style="padding:22px 24px;"
+             :style="!paywallEnabled && 'border-color:rgba(28,230,96,.28);box-shadow:0 0 20px rgba(28,230,96,.06);'">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:20px;">
+            <div>
+              <div style="font-weight:700;font-size:.95rem;color:var(--text1);margin-bottom:4px;">
+                Paywall
+                <span :class="paywallEnabled ? 'badge-gray' : 'badge-green'" class="badge" style="margin-left:8px;"
+                      x-text="paywallEnabled ? 'ON' : 'OFF'"></span>
+              </div>
+              <div style="font-size:.8rem;color:var(--text2);"
+                   x-text="paywallEnabled
+                     ? 'Users must pay (500 UGX/5h or 1000 UGX/24h) to connect.'
+                     : 'All users get free VPN access. No payment required.'"></div>
+            </div>
+            <button class="toggle-track" :class="paywallEnabled ? 'on' : 'off'"
+                    @click="togglePaywall()" :disabled="paywallBusy" style="flex-shrink:0;">
+              <span class="toggle-thumb"></span>
+            </button>
+          </div>
+          <div x-show="paywallBusy" style="margin-top:10px;font-size:.78rem;color:var(--text2);display:flex;align-items:center;gap:6px;">
+            <svg class="spin" width="12" height="12" fill="none" viewBox="0 0 24 24">
+              <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" opacity=".25"/>
+              <path d="M4 12a8 8 0 018-8" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
+            </svg>
+            Saving change…
+          </div>
+        </div>
+
+        <!-- Info box -->
+        <div style="background:rgba(28,230,96,.04);border:1px solid var(--border);border-radius:12px;padding:16px 18px;">
+          <div style="font-size:.78rem;font-weight:600;color:var(--text2);margin-bottom:8px;text-transform:uppercase;letter-spacing:.06em;">How the paywall works</div>
+          <ul style="font-size:.8rem;color:var(--text2);line-height:1.7;padding-left:16px;">
+            <li>When <strong style="color:var(--text1);">ON</strong> — app checks device payment status before connecting.</li>
+            <li>When <strong style="color:var(--accent);">OFF</strong> — app grants everyone a free 24h session automatically.</li>
+            <li>Changes take effect immediately on next connection attempt.</li>
+          </ul>
+        </div>
+
       </div>
     </div>
 
   </main>
 </div>
 
-<!-- GRANT MODAL ─────────────────────────────────────────────────────────────── -->
-<div x-show="showGrantModal" class="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" @click.self="showGrantModal=false">
-  <div class="bg-slate-800 rounded-2xl p-6 border border-slate-700 w-full max-w-sm space-y-4">
-    <h2 class="font-bold text-lg">Grant Access</h2>
-    <div>
-      <label class="block text-xs font-semibold text-slate-400 mb-1.5 uppercase tracking-widest">Device ID (64 hex chars)</label>
-      <input x-model="grant.deviceId" type="text" placeholder="a1b2c3d4…" class="w-full bg-slate-900 border border-slate-600 rounded-xl px-4 py-3 text-slate-100 font-mono text-xs focus:outline-none focus:border-brand-500 transition"/>
-    </div>
-    <div>
-      <label class="block text-xs font-semibold text-slate-400 mb-1.5 uppercase tracking-widest">Plan</label>
-      <select x-model="grant.plan" class="w-full bg-slate-900 border border-slate-600 rounded-xl px-4 py-3 text-slate-100 focus:outline-none focus:border-brand-500 transition">
-        <option value="5h">5 Hours</option>
-        <option value="24h">24 Hours</option>
-        <option value="custom">Custom Hours</option>
-      </select>
-    </div>
-    <div x-show="grant.plan === 'custom'">
-      <label class="block text-xs font-semibold text-slate-400 mb-1.5 uppercase tracking-widest">Hours</label>
-      <input x-model="grant.hours" type="number" placeholder="e.g. 48" min="1" max="8760" class="w-full bg-slate-900 border border-slate-600 rounded-xl px-4 py-3 text-slate-100 focus:outline-none focus:border-brand-500 transition"/>
-    </div>
-    <div x-show="grant.msg" :class="grant.ok ? 'bg-green-500/10 border-green-500/30 text-green-400' : 'bg-red-500/10 border-red-500/30 text-red-400'" class="border rounded-xl px-4 py-3 text-sm" x-text="grant.msg"></div>
-    <div class="flex gap-3">
-      <button @click="showGrantModal=false" class="flex-1 bg-slate-700 hover:bg-slate-600 py-3 rounded-xl text-sm transition">Cancel</button>
-      <button @click="grantAccess()" :disabled="grant.busy" class="flex-1 bg-brand-600 hover:bg-brand-500 disabled:opacity-50 py-3 rounded-xl text-sm font-medium transition flex items-center justify-center gap-2">
-        <svg x-show="grant.busy" class="spin h-4 w-4" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/></svg>
-        <span x-text="grant.busy ? 'Granting…' : 'Grant'"></span>
+<!-- ═══════════════════════════════ GRANT MODAL ══════════════════════════════ -->
+<div x-show="showGrantModal" class="modal-bg" @click.self="showGrantModal=false">
+  <div class="modal anim-up">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:22px;">
+      <h2 style="font-size:1.1rem;font-weight:700;">Grant Access</h2>
+      <button @click="showGrantModal=false" style="background:none;border:none;cursor:pointer;color:var(--text2);padding:4px;">
+        <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+        </svg>
       </button>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:16px;">
+      <div>
+        <label style="display:block;font-size:.72rem;font-weight:700;color:var(--text2);
+                      text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;">Device ID (64 hex chars)</label>
+        <input class="inp" x-model="grant.deviceId" type="text" placeholder="a1b2c3d4e5f6…" spellcheck="false"
+               style="font-family:monospace;font-size:.8rem;" />
+      </div>
+
+      <div>
+        <label style="display:block;font-size:.72rem;font-weight:700;color:var(--text2);
+                      text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;">Plan</label>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;">
+          <button @click="grant.plan='5h'"
+                  :style="grant.plan==='5h' ? 'border-color:var(--accent);background:rgba(28,230,96,.1);color:var(--text1);' : ''"
+                  class="btn btn-ghost" style="padding:10px 8px;flex-direction:column;gap:2px;">
+            <span style="font-size:1rem;font-weight:800;">5h</span>
+            <span style="font-size:.68rem;color:var(--text2);">500 UGX</span>
+          </button>
+          <button @click="grant.plan='24h'"
+                  :style="grant.plan==='24h' ? 'border-color:var(--accent);background:rgba(28,230,96,.1);color:var(--text1);' : ''"
+                  class="btn btn-ghost" style="padding:10px 8px;flex-direction:column;gap:2px;">
+            <span style="font-size:1rem;font-weight:800;">24h</span>
+            <span style="font-size:.68rem;color:var(--text2);">1000 UGX</span>
+          </button>
+          <button @click="grant.plan='custom'"
+                  :style="grant.plan==='custom' ? 'border-color:var(--accent);background:rgba(28,230,96,.1);color:var(--text1);' : ''"
+                  class="btn btn-ghost" style="padding:10px 8px;flex-direction:column;gap:2px;">
+            <span style="font-size:1rem;font-weight:800;">…</span>
+            <span style="font-size:.68rem;color:var(--text2);">Custom</span>
+          </button>
+        </div>
+      </div>
+
+      <div x-show="grant.plan==='custom'">
+        <label style="display:block;font-size:.72rem;font-weight:700;color:var(--text2);
+                      text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;">Hours (1–8760)</label>
+        <input class="inp" x-model="grant.hours" type="number" placeholder="e.g. 48" min="1" max="8760" />
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:4px;">
+        <button class="btn btn-ghost" @click="showGrantModal=false" style="padding:12px;">Cancel</button>
+        <button class="btn btn-primary" @click="grantAccess()" :disabled="grant.busy" style="padding:12px;">
+          <svg x-show="grant.busy" class="spin" width="14" height="14" fill="none" viewBox="0 0 24 24">
+            <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" opacity=".25"/>
+            <path d="M4 12a8 8 0 018-8" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
+          </svg>
+          <span x-text="grant.busy ? 'Granting…' : 'Grant'"></span>
+        </button>
+      </div>
     </div>
   </div>
 </div>
 
+<!-- ═══════════════════════════════ SCRIPTS ══════════════════════════════════ -->
 <script defer src="https://unpkg.com/alpinejs@3.14.1/dist/cdn.min.js"></script>
 <script>
+/* ── Toast helper (vanilla, no Alpine dependency) ── */
+function toast(msg, type = 'success') {
+  const el = document.createElement('div');
+  el.className = `toast toast-${type}`;
+  const icon = type === 'success'
+    ? `<svg width="16" height="16" fill="none" viewBox="0 0 24 24" style="flex-shrink:0;"><path d="M5 13l4 4L19 7" stroke="#1CE660" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`
+    : `<svg width="16" height="16" fill="none" viewBox="0 0 24 24" style="flex-shrink:0;"><path d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" stroke="#f87171" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+  el.innerHTML = icon + `<span>${msg}</span>`;
+  document.getElementById('toasts').appendChild(el);
+  setTimeout(() => { el.style.opacity = '0'; el.style.transform = 'translateX(12px)';
+                     el.style.transition = 'all .25s'; setTimeout(() => el.remove(), 280); }, 3400);
+}
+
 function app() {
   return {
-    authed: false,
-    loginKey: '',
-    loginErr: '',
-    loginBusy: false,
-    adminKey: '',
+    /* ── Auth ── */
+    authed: false, loginKey: '', loginErr: '', loginBusy: false, adminKey: '',
+
+    /* ── Navigation ── */
     active: 'dashboard',
     tabs: [
-      { id: 'dashboard', label: 'Dashboard',    icon: '<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>' },
-      { id: 'payments',  label: 'Payments',     icon: '<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/></svg>' },
-      { id: 'devices',   label: 'Devices',      icon: '<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>' },
-      { id: 'withdraw',  label: 'Withdraw',     icon: '<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"/></svg>' },
-      { id: 'config',    label: 'VPN Config',   icon: '<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01"/></svg>' },
-      { id: 'settings',  label: 'Settings',     icon: '<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>' },
+      { id: 'dashboard', label: 'Dashboard', icon: `<svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="18" height="18"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>` },
+      { id: 'payments',  label: 'Payments',  icon: `<svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="18" height="18"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/></svg>` },
+      { id: 'devices',   label: 'Devices',   icon: `<svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="18" height="18"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>` },
+      { id: 'withdraw',  label: 'Withdraw',  icon: `<svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="18" height="18"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"/></svg>` },
+      { id: 'config',    label: 'VPN Config', icon: `<svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="18" height="18"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01"/></svg>` },
+      { id: 'settings',  label: 'Settings',  icon: `<svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="18" height="18"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>` },
     ],
-    stats: {},
-    statsLoading: false,
-    payments: [],
-    paymentsLoading: false,
-    pPage: 1,
-    pFilter: 'all',
-    devices: [],
-    devicesLoading: false,
-    dPage: 1,
-    paywallEnabled: true,
-    settingsMsg: '',
-    settingsOk: true,
-    showGrantModal: false,
-    grant: { deviceId: '', plan: '24h', hours: '', busy: false, msg: '', ok: true },
-    wd: { phone: '', amount: '', provider: 'MTN', busy: false, msg: '', ok: true },
-    cfg: { json: '', busy: false, msg: '', ok: true },
 
+    /* ── Dashboard ── */
+    stats: {}, statsLoading: false,
+    paywallEnabled: true, paywallBusy: false,
+
+    /* ── Payments ── */
+    payments: [], paymentsLoading: false, pPage: 1, pFilter: 'all',
+
+    /* ── Devices ── */
+    devices: [], devicesLoading: false, dPage: 1,
+
+    /* ── Modals ── */
+    showGrantModal: false,
+    grant: { deviceId: '', plan: '24h', hours: '', busy: false },
+
+    /* ── Withdraw ── */
+    wd: { phone: '', amount: '', provider: 'MTN', busy: false },
+
+    /* ── Config ── */
+    cfg: { json: '', busy: false },
+    cfgTemplate: JSON.stringify({ servers: [{ name: 'UG-1', address: '1.2.3.4', port: 443, protocol: 'vless', uuid: 'your-uuid-here', network: 'tcp', tls: true }] }, null, 2),
+
+    /* ════════════════ INIT / AUTH ════════════════ */
     async init() {
       const saved = localStorage.getItem('t5g_admin_key');
       if (saved) {
@@ -412,11 +829,11 @@ function app() {
 
     async login() {
       this.loginErr = '';
-      if (!this.loginKey.trim()) { this.loginErr = 'Enter your admin key.'; return; }
+      if (!this.loginKey.trim()) { this.loginErr = 'Please enter your admin key.'; return; }
       this.loginBusy = true;
       const ok = await this.verify(this.loginKey.trim());
       this.loginBusy = false;
-      if (!ok) { this.loginErr = 'Invalid admin key.'; return; }
+      if (!ok) { this.loginErr = 'Invalid admin key — please try again.'; return; }
       this.adminKey = this.loginKey.trim();
       localStorage.setItem('t5g_admin_key', this.adminKey);
       this.authed = true;
@@ -425,9 +842,7 @@ function app() {
 
     logout() {
       localStorage.removeItem('t5g_admin_key');
-      this.authed = false;
-      this.adminKey = '';
-      this.loginKey = '';
+      this.authed = false; this.adminKey = ''; this.loginKey = '';
     },
 
     onAuthed() {
@@ -439,26 +854,43 @@ function app() {
       });
     },
 
-    async api(path, opts = {}) {
-      const r = await fetch(path, { ...opts, headers: { 'Content-Type': 'application/json', 'X-Admin-Key': this.adminKey, ...(opts.headers || {}) } });
-      return r.json();
+    switchTab(id) {
+      this.active = id;
     },
 
+    /* ════════════════ API HELPER ════════════════ */
+    async api(path, opts = {}) {
+      const r = await fetch(path, {
+        ...opts,
+        headers: { 'Content-Type': 'application/json', 'X-Admin-Key': this.adminKey, ...(opts.headers || {}) }
+      });
+      const json = await r.json().catch(() => ({}));
+      if (!r.ok && !json.ok) json._httpErr = r.status;
+      return json;
+    },
+
+    /* ════════════════ STATS ════════════════ */
     async loadStats() {
       this.statsLoading = true;
-      try { this.stats = await this.api('/api/admin/stats'); } finally { this.statsLoading = false; }
+      try {
+        const d = await this.api('/api/admin/stats');
+        if (d.error) { toast(d.error, 'error'); return; }
+        this.stats = d;
+      } catch { toast('Failed to load stats', 'error'); }
+      finally { this.statsLoading = false; }
     },
 
+    /* ════════════════ PAYWALL ════════════════ */
     async loadPaywall() {
       try {
         const d = await fetch('/api/settings').then(r => r.json());
-        this.paywallEnabled = d.paywallEnabled;
+        this.paywallEnabled = d.paywallEnabled !== false;
       } catch {}
     },
 
     async togglePaywall() {
       const next = !this.paywallEnabled;
-      this.settingsMsg = '';
+      this.paywallBusy = true;
       try {
         const d = await this.api('/api/admin/settings', {
           method: 'POST',
@@ -466,95 +898,126 @@ function app() {
         });
         if (d.ok) {
           this.paywallEnabled = next;
-          this.settingsMsg = `Paywall ${next ? 'enabled' : 'disabled'}.`;
-          this.settingsOk = true;
+          toast(`Paywall ${next ? 'enabled — users must pay to connect.' : 'disabled — all users connect free.'}`,
+                next ? 'error' : 'success');
         } else {
-          this.settingsMsg = d.error || 'Failed to update.';
-          this.settingsOk = false;
+          toast(d.error || 'Failed to update paywall.', 'error');
         }
-      } catch { this.settingsMsg = 'Network error.'; this.settingsOk = false; }
-      setTimeout(() => this.settingsMsg = '', 3000);
+      } catch { toast('Network error — check your connection.', 'error'); }
+      finally { this.paywallBusy = false; }
     },
 
+    /* ════════════════ PAYMENTS ════════════════ */
     async loadPayments() {
       this.paymentsLoading = true;
       try {
         const d = await this.api(`/api/admin/payments?page=${this.pPage}&limit=50&status=${this.pFilter}`);
+        if (d.error) { toast(d.error, 'error'); return; }
         this.payments = d.payments ?? [];
-      } finally { this.paymentsLoading = false; }
+      } catch { toast('Failed to load payments', 'error'); }
+      finally { this.paymentsLoading = false; }
     },
 
+    /* ════════════════ DEVICES ════════════════ */
     async loadDevices() {
       this.devicesLoading = true;
       try {
         const d = await this.api(`/api/admin/devices?page=${this.dPage}&limit=50`);
+        if (d.error) { toast(d.error, 'error'); return; }
         this.devices = d.devices ?? [];
-      } finally { this.devicesLoading = false; }
+      } catch { toast('Failed to load devices', 'error'); }
+      finally { this.devicesLoading = false; }
     },
 
     async revokeDevice(deviceId) {
-      if (!confirm(`Revoke access for ${deviceId.slice(0,16)}…?`)) return;
+      if (!confirm(`Revoke access for device ${deviceId.slice(0, 12)}…?`)) return;
       const d = await this.api('/api/admin/revoke', { method: 'POST', body: JSON.stringify({ deviceId }) });
-      if (d.ok) this.loadDevices();
-      else alert(d.error || 'Failed to revoke.');
+      if (d.ok) {
+        toast('Device access revoked.', 'success');
+        this.loadDevices();
+      } else {
+        toast(d.error || 'Revoke failed.', 'error');
+      }
     },
 
     async grantAccess() {
-      this.grant.busy = true; this.grant.msg = '';
+      const did = this.grant.deviceId.trim();
+      if (!/^[0-9a-f]{64}$/.test(did)) {
+        toast('Device ID must be exactly 64 hex characters.', 'error'); return;
+      }
+      if (this.grant.plan === 'custom' && (!this.grant.hours || Number(this.grant.hours) < 1)) {
+        toast('Enter a valid number of hours (1–8760).', 'error'); return;
+      }
+      this.grant.busy = true;
       try {
-        const body = { deviceId: this.grant.deviceId };
+        const body = { deviceId: did };
         if (this.grant.plan === 'custom') body.hours = Number(this.grant.hours);
         else body.plan = this.grant.plan;
         const d = await this.api('/api/admin/grant', { method: 'POST', body: JSON.stringify(body) });
         if (d.ok) {
-          this.grant.msg = `Access granted until ${new Date(d.expiresAt).toLocaleString()}.`;
-          this.grant.ok = true;
+          toast(`Access granted until ${fmtDateStatic(d.expiresAt)}.`, 'success');
+          this.showGrantModal = false;
+          this.grant = { deviceId: '', plan: '24h', hours: '', busy: false };
           this.loadDevices();
-          setTimeout(() => { this.showGrantModal = false; this.grant.msg = ''; }, 2000);
         } else {
-          this.grant.msg = d.error || 'Failed.';
-          this.grant.ok = false;
+          toast(d.error || 'Grant failed.', 'error');
         }
-      } catch { this.grant.msg = 'Network error.'; this.grant.ok = false; }
-      this.grant.busy = false;
+      } catch { toast('Network error.', 'error'); }
+      finally { this.grant.busy = false; }
     },
 
+    /* ════════════════ WITHDRAW ════════════════ */
     async withdraw() {
-      this.wd.busy = true; this.wd.msg = '';
+      if (!this.wd.phone.trim()) { toast('Enter a phone number.', 'error'); return; }
+      const amt = Number(this.wd.amount);
+      if (!amt || amt < 500) { toast('Amount must be at least 500 UGX.', 'error'); return; }
+      this.wd.busy = true;
       try {
-        const d = await this.api('/api/admin/withdraw', { method: 'POST', body: JSON.stringify({ phone: this.wd.phone, amount: Number(this.wd.amount), provider: this.wd.provider }) });
+        const d = await this.api('/api/admin/withdraw', {
+          method: 'POST',
+          body: JSON.stringify({ phone: this.wd.phone, amount: amt, provider: this.wd.provider }),
+        });
         if (d.ok) {
-          this.wd.msg = d.message || 'Withdrawal initiated.';
-          this.wd.ok = true;
+          toast(d.message || 'Withdrawal initiated — check your phone.', 'success');
           this.wd.phone = ''; this.wd.amount = '';
         } else {
-          this.wd.msg = d.message || d.error || 'Failed.';
-          this.wd.ok = false;
+          toast(d.message || d.error || 'Withdrawal failed.', 'error');
         }
-      } catch { this.wd.msg = 'Network error.'; this.wd.ok = false; }
-      this.wd.busy = false;
+      } catch { toast('Network error.', 'error'); }
+      finally { this.wd.busy = false; }
     },
 
+    /* ════════════════ VPN CONFIG ════════════════ */
     async pushConfig() {
-      this.cfg.busy = true; this.cfg.msg = '';
+      let parsed;
+      try { parsed = JSON.parse(this.cfg.json); }
+      catch { toast('Invalid JSON — check your config.', 'error'); return; }
+      if (!Array.isArray(parsed?.servers) || parsed.servers.length === 0) {
+        toast('Config must have a non-empty "servers" array.', 'error'); return;
+      }
+      this.cfg.busy = true;
       try {
-        let parsed;
-        try { parsed = JSON.parse(this.cfg.json); } catch { this.cfg.msg = 'Invalid JSON.'; this.cfg.ok = false; this.cfg.busy = false; return; }
         const d = await this.api('/api/admin/config', { method: 'POST', body: JSON.stringify(parsed) });
         if (d.ok) {
-          this.cfg.msg = `Config v${d.version} pushed (${d.serverCount} server${d.serverCount !== 1 ? 's' : ''}).`;
-          this.cfg.ok = true;
+          toast(`Config v${d.version} pushed — ${d.serverCount} server${d.serverCount !== 1 ? 's' : ''}.`, 'success');
         } else {
-          this.cfg.msg = d.error || 'Failed.';
-          this.cfg.ok = false;
+          toast(d.error || 'Config push failed.', 'error');
         }
-      } catch { this.cfg.msg = 'Network error.'; this.cfg.ok = false; }
-      this.cfg.busy = false;
+      } catch { toast('Network error.', 'error'); }
+      finally { this.cfg.busy = false; }
     },
 
-    fmtNum(n) { return Number(n).toLocaleString(); },
-    fmtDate(ts) { return new Date(Number(ts)).toLocaleString(); },
+    /* ════════════════ HELPERS ════════════════ */
+    fmtNum(n) { return Number(n).toLocaleString('en-UG'); },
+    fmtDate(ts) { return fmtDateStatic(ts); },
+    isExpiringSoon(ts) { return Number(ts) - Date.now() < 3_600_000; },
   };
+}
+
+function fmtDateStatic(ts) {
+  const d = new Date(typeof ts === 'string' && ts.includes('T') ? ts : Number(ts));
+  if (isNaN(d)) return '—';
+  return d.toLocaleString('en-UG', { dateStyle: 'medium', timeStyle: 'short' });
 }
 </script>
 </body>

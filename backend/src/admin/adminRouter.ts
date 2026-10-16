@@ -200,6 +200,51 @@ adminRouter.post('/settings', requireAdmin, async (req: Request, res: Response) 
     }
 });
 
+adminRouter.get('/applications', requireAdmin, async (req: Request, res: Response) => {
+    try {
+        const page   = Math.max(1, parseInt(req.query.page   as string ?? '1',  10));
+        const limit  = Math.min(100, parseInt(req.query.limit as string ?? '50', 10));
+        const status = req.query.status as string;
+        const from   = (page - 1) * limit;
+
+        let query = db.from('contact_applications')
+            .select('id, name, email, country, device, message, status, created_at')
+            .order('created_at', { ascending: false })
+            .range(from, from + limit - 1);
+
+        if (status && status !== 'all') {
+            query = query.eq('status', status);
+        }
+
+        const { data, error } = await query;
+        if (error) throw new Error(error.message);
+
+        return res.json({ page, limit, count: data?.length ?? 0, applications: data ?? [] });
+    } catch (err) {
+        console.error('[admin/applications]', err);
+        return res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+adminRouter.post('/applications/:id/status', requireAdmin, async (req: Request, res: Response) => {
+    try {
+        const { id } = req.params;
+        const { status } = req.body;
+        if (!['pending', 'contacted', 'approved', 'rejected'].includes(status))
+            return res.status(400).json({ error: 'Invalid status value.' });
+
+        const { error } = await db.from('contact_applications')
+            .update({ status, updated_at: Date.now() })
+            .eq('id', id);
+        if (error) throw new Error(error.message);
+
+        return res.json({ ok: true, id, status });
+    } catch (err) {
+        console.error('[admin/applications/status]', err);
+        return res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
 adminRouter.post('/withdraw', requireAdmin, async (req: Request, res: Response) => {
     try {
         const { phone, amount, provider } = req.body;

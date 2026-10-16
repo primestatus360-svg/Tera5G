@@ -92,10 +92,10 @@ fun SplashScreen(onComplete: () -> Unit) {
             Spacer(Modifier.height(52.dp))
 
             Text(
-                "TERA5G",
+                "Tera5G",
                 style       = MaterialTheme.typography.displayLarge.copy(
-                    fontSize      = 42.sp,
-                    letterSpacing = 8.sp
+                    fontSize      = 46.sp,
+                    letterSpacing = 2.sp
                 ),
                 fontWeight  = FontWeight.Bold,
                 color       = White,
@@ -113,7 +113,7 @@ fun SplashScreen(onComplete: () -> Unit) {
         }
 
         Text(
-            "Uganda's Premium VPN",
+            "Secure · Fast · Private",
             style    = MaterialTheme.typography.labelSmall.copy(letterSpacing = 1.2.sp),
             color    = TextSecondaryDark.copy(alpha = 0.35f),
             textAlign = TextAlign.Center,

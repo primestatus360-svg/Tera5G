@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Tera5G — Uganda's Premium VPN</title>
-<meta name="description" content="Secure, fast and private VPN for Uganda. Military-grade encryption, blazing speed, and complete privacy. From just 500 UGX.">
+<title>Tera5G — Premium VPN</title>
+<meta name="description" content="Military-grade encryption, blazing speed, and complete privacy. Available on Android worldwide.">
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -30,105 +30,68 @@
     overflow-x: hidden;
   }
 
-  /* ── Scrollbar ── */
   ::-webkit-scrollbar { width: 4px; }
   ::-webkit-scrollbar-track { background: var(--bg); }
   ::-webkit-scrollbar-thumb { background: rgba(28,230,96,0.3); border-radius: 4px; }
 
-  /* ── Ambient background orbs ── */
   .orb {
-    position: fixed;
-    border-radius: 50%;
-    pointer-events: none;
-    z-index: 0;
-    filter: blur(100px);
-    opacity: 0.18;
+    position: fixed; border-radius: 50%; pointer-events: none; z-index: 0;
+    filter: blur(100px); opacity: 0.18;
   }
   .orb-1 { width: 600px; height: 600px; background: #1CE660; top: -200px; left: 50%; transform: translateX(-50%); }
   .orb-2 { width: 400px; height: 400px; background: #3de8ff; bottom: 200px; right: -100px; opacity: 0.08; }
 
-  /* ── Glass card ── */
   .glass {
-    background: var(--surf);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
-    border: 1px solid var(--border);
-    border-radius: 24px;
+    background: var(--surf); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+    border: 1px solid var(--border); border-radius: 24px;
   }
 
-  /* ── Navbar ── */
   nav {
     position: fixed; top: 0; left: 0; right: 0; z-index: 100;
-    padding: 0 24px;
-    height: 64px;
+    padding: 0 24px; height: 64px;
     display: flex; align-items: center; justify-content: space-between;
-    background: rgba(6,11,6,0.7);
-    backdrop-filter: blur(24px);
-    -webkit-backdrop-filter: blur(24px);
+    background: rgba(6,11,6,0.7); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
     border-bottom: 1px solid var(--border);
   }
-
-  .nav-brand {
-    display: flex; align-items: center; gap: 12px;
-    text-decoration: none;
-  }
-  .nav-logo {
-    width: 36px; height: 36px; border-radius: 50%;
-    border: 1.5px solid rgba(28,230,96,0.4);
-    overflow: hidden;
-    box-shadow: 0 0 16px rgba(28,230,96,0.2);
-  }
+  .nav-brand { display: flex; align-items: center; gap: 12px; text-decoration: none; }
+  .nav-logo { width: 36px; height: 36px; border-radius: 50%; border: 1.5px solid rgba(28,230,96,0.4); overflow: hidden; box-shadow: 0 0 16px rgba(28,230,96,0.2); }
   .nav-logo img { width: 100%; height: 100%; object-fit: cover; }
   .nav-title { font-size: 1.1rem; font-weight: 800; color: var(--text1); letter-spacing: -0.01em; }
-
   .nav-download {
     display: inline-flex; align-items: center; gap: 8px;
-    background: var(--accent); color: #030f06;
-    font-weight: 700; font-size: 0.82rem;
-    padding: 8px 18px; border-radius: 10px;
-    text-decoration: none;
-    transition: all 0.2s;
-    border: none; cursor: pointer;
+    background: var(--accent); color: #030f06; font-weight: 700; font-size: 0.82rem;
+    padding: 8px 18px; border-radius: 10px; text-decoration: none;
+    transition: all 0.2s; border: none; cursor: pointer;
   }
   .nav-download:hover { filter: brightness(1.1); box-shadow: 0 0 20px rgba(28,230,96,0.35); }
 
-  /* ── Hero ── */
   .hero {
-    position: relative; z-index: 1;
-    min-height: 100vh;
+    position: relative; z-index: 1; min-height: 100vh;
     display: flex; flex-direction: column; align-items: center; justify-content: center;
-    text-align: center;
-    padding: 100px 24px 80px;
+    text-align: center; padding: 100px 24px 80px;
   }
 
-  /* Logo mark */
   .logo-ring-wrap {
-    position: relative;
-    width: 160px; height: 160px;
-    margin-bottom: 48px;
-    animation: float 6s ease-in-out infinite;
+    position: relative; width: 160px; height: 160px;
+    margin-bottom: 48px; animation: float 6s ease-in-out infinite;
   }
-
   @keyframes float { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
   @keyframes breathe { 0%,100% { opacity: 0.12; } 50% { opacity: 0.28; } }
+  @keyframes blink { 0%,100% { opacity:1; } 50% { opacity:0.3; } }
 
   .logo-ring-wrap .ring {
-    position: absolute; border-radius: 50%;
-    top: 50%; left: 50%;
+    position: absolute; border-radius: 50%; top: 50%; left: 50%;
     transform: translate(-50%, -50%);
     background: radial-gradient(circle, rgba(28,230,96,0.25) 0%, transparent 70%);
     animation: breathe 3s ease-in-out infinite;
   }
-  .logo-ring-wrap .ring-1 { width: 260px; height: 260px; animation-delay: 0s; }
-  .logo-ring-wrap .ring-2 { width: 210px; height: 210px; animation-delay: 0.4s; }
-  .logo-ring-wrap .ring-3 { width: 170px; height: 170px; animation-delay: 0.8s; }
+  .ring-1 { width: 260px; height: 260px; animation-delay: 0s; }
+  .ring-2 { width: 210px; height: 210px; animation-delay: 0.4s; }
+  .ring-3 { width: 170px; height: 170px; animation-delay: 0.8s; }
 
   .logo-circle {
-    position: relative; z-index: 2;
-    width: 160px; height: 160px;
-    border-radius: 50%;
-    overflow: hidden;
-    border: 2px solid rgba(28,230,96,0.5);
+    position: relative; z-index: 2; width: 160px; height: 160px; border-radius: 50%;
+    overflow: hidden; border: 2px solid rgba(28,230,96,0.5);
     box-shadow: 0 0 48px rgba(28,230,96,0.3), inset 0 0 24px rgba(28,230,96,0.1);
     background: rgba(28,230,96,0.08);
   }
@@ -136,276 +99,131 @@
 
   .hero-badge {
     display: inline-flex; align-items: center; gap: 6px;
-    background: rgba(28,230,96,0.1);
-    border: 1px solid rgba(28,230,96,0.25);
-    padding: 6px 14px; border-radius: 999px;
-    font-size: 0.72rem; font-weight: 700;
-    color: var(--accent); letter-spacing: 0.1em; text-transform: uppercase;
-    margin-bottom: 20px;
+    background: rgba(28,230,96,0.1); border: 1px solid rgba(28,230,96,0.25);
+    padding: 6px 14px; border-radius: 999px; font-size: 0.72rem; font-weight: 700;
+    color: var(--accent); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 20px;
   }
   .hero-badge .dot {
-    width: 6px; height: 6px; border-radius: 50%;
-    background: var(--accent);
+    width: 6px; height: 6px; border-radius: 50%; background: var(--accent);
     animation: blink 1.6s ease-in-out infinite;
   }
-  @keyframes blink { 0%,100% { opacity:1; } 50% { opacity:0.3; } }
 
   .hero-title {
-    font-size: clamp(2.8rem, 8vw, 5.5rem);
-    font-weight: 900;
-    letter-spacing: -0.03em;
-    line-height: 1.05;
-    margin-bottom: 20px;
+    font-size: clamp(2.8rem, 8vw, 5.5rem); font-weight: 900;
+    letter-spacing: -0.03em; line-height: 1.05; margin-bottom: 20px;
     background: linear-gradient(135deg, #e8faea 0%, #1CE660 60%, #3de8ff 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
   }
-
   .hero-sub {
-    font-size: clamp(1rem, 2.5vw, 1.2rem);
-    color: var(--text2);
-    max-width: 500px;
-    line-height: 1.6;
-    margin-bottom: 40px;
+    font-size: clamp(1rem, 2.5vw, 1.2rem); color: var(--text2);
+    max-width: 520px; line-height: 1.6; margin-bottom: 40px;
   }
-
-  .hero-actions {
-    display: flex; align-items: center; gap: 16px;
-    flex-wrap: wrap; justify-content: center;
-  }
+  .hero-actions { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; justify-content: center; }
 
   .btn-download {
     display: inline-flex; align-items: center; gap: 10px;
-    background: var(--accent); color: #030f06;
-    font-weight: 800; font-size: 1rem;
-    padding: 16px 32px; border-radius: 16px;
-    text-decoration: none;
-    transition: all 0.2s;
-    box-shadow: 0 0 40px rgba(28,230,96,0.35);
+    background: var(--accent); color: #030f06; font-weight: 800; font-size: 1rem;
+    padding: 16px 32px; border-radius: 16px; text-decoration: none;
+    transition: all 0.2s; box-shadow: 0 0 40px rgba(28,230,96,0.35);
   }
-  .btn-download:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 48px rgba(28,230,96,0.5);
-    filter: brightness(1.08);
-  }
+  .btn-download:hover { transform: translateY(-2px); box-shadow: 0 8px 48px rgba(28,230,96,0.5); filter: brightness(1.08); }
   .btn-download svg { flex-shrink: 0; }
 
   .btn-secondary {
     display: inline-flex; align-items: center; gap: 8px;
-    background: rgba(255,255,255,0.06);
-    backdrop-filter: blur(10px);
-    border: 1px solid var(--border2);
-    color: var(--text1);
-    font-weight: 600; font-size: 0.9rem;
-    padding: 15px 24px; border-radius: 14px;
-    text-decoration: none;
-    transition: all 0.2s;
+    background: rgba(255,255,255,0.06); backdrop-filter: blur(10px);
+    border: 1px solid var(--border2); color: var(--text1); font-weight: 600; font-size: 0.9rem;
+    padding: 15px 24px; border-radius: 14px; text-decoration: none; transition: all 0.2s;
   }
   .btn-secondary:hover { background: rgba(28,230,96,0.08); border-color: var(--accent); }
 
-  .hero-price {
-    margin-top: 18px;
-    font-size: 0.82rem; color: var(--text2);
-  }
+  .hero-price { margin-top: 18px; font-size: 0.82rem; color: var(--text2); }
   .hero-price strong { color: var(--accent); }
 
-  /* ── Stats bar ── */
   .stats-bar {
-    position: relative; z-index: 1;
-    display: flex; justify-content: center;
-    gap: 0; flex-wrap: wrap;
-    margin: 0 auto 80px;
-    max-width: 700px;
-    border: 1px solid var(--border);
-    border-radius: 20px;
-    background: var(--surf);
-    backdrop-filter: blur(16px);
-    overflow: hidden;
+    position: relative; z-index: 1; display: flex; justify-content: center;
+    gap: 0; flex-wrap: wrap; margin: 0 auto 80px; max-width: 700px;
+    border: 1px solid var(--border); border-radius: 20px;
+    background: var(--surf); backdrop-filter: blur(16px); overflow: hidden;
   }
-
-  .stat-item {
-    flex: 1; min-width: 140px;
-    padding: 24px 20px;
-    text-align: center;
-    border-right: 1px solid var(--border);
-  }
+  .stat-item { flex: 1; min-width: 140px; padding: 24px 20px; text-align: center; border-right: 1px solid var(--border); }
   .stat-item:last-child { border-right: none; }
-
-  .stat-value {
-    font-size: 1.8rem; font-weight: 900;
-    color: var(--accent); letter-spacing: -0.04em;
-    line-height: 1;
-    margin-bottom: 6px;
-  }
+  .stat-value { font-size: 1.8rem; font-weight: 900; color: var(--accent); letter-spacing: -0.04em; line-height: 1; margin-bottom: 6px; }
   .stat-label { font-size: 0.72rem; color: var(--text2); text-transform: uppercase; letter-spacing: 0.08em; font-weight: 600; }
 
-  /* ── Section ── */
-  section {
-    position: relative; z-index: 1;
-    max-width: 1100px; margin: 0 auto;
-    padding: 80px 24px;
-  }
+  section { position: relative; z-index: 1; max-width: 1100px; margin: 0 auto; padding: 80px 24px; }
+  .section-badge { display: inline-block; font-size: 0.68rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--accent); margin-bottom: 14px; }
+  .section-title { font-size: clamp(1.8rem, 4vw, 2.8rem); font-weight: 800; letter-spacing: -0.03em; color: var(--text1); margin-bottom: 14px; line-height: 1.15; }
+  .section-sub { font-size: 1rem; color: var(--text2); max-width: 500px; line-height: 1.6; margin-bottom: 48px; }
 
-  .section-badge {
-    display: inline-block;
-    font-size: 0.68rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase;
-    color: var(--accent); margin-bottom: 14px;
-  }
-
-  .section-title {
-    font-size: clamp(1.8rem, 4vw, 2.8rem);
-    font-weight: 800; letter-spacing: -0.03em;
-    color: var(--text1); margin-bottom: 14px; line-height: 1.15;
-  }
-
-  .section-sub {
-    font-size: 1rem; color: var(--text2); max-width: 500px; line-height: 1.6;
-    margin-bottom: 48px;
-  }
-
-  /* ── Feature grid ── */
-  .features-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-    gap: 20px;
-  }
-
+  .features-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; }
   .feature-card {
-    padding: 28px;
-    border: 1px solid var(--border);
-    border-radius: 20px;
-    background: var(--surf);
-    backdrop-filter: blur(16px);
-    transition: border-color 0.2s, transform 0.2s;
+    padding: 28px; border: 1px solid var(--border); border-radius: 20px;
+    background: var(--surf); backdrop-filter: blur(16px); transition: border-color 0.2s, transform 0.2s;
   }
-  .feature-card:hover {
-    border-color: var(--border2);
-    transform: translateY(-4px);
-  }
-
-  .feature-icon {
-    width: 52px; height: 52px; border-radius: 14px;
-    display: flex; align-items: center; justify-content: center;
-    margin-bottom: 18px;
-  }
-
+  .feature-card:hover { border-color: var(--border2); transform: translateY(-4px); }
+  .feature-icon { width: 52px; height: 52px; border-radius: 14px; display: flex; align-items: center; justify-content: center; margin-bottom: 18px; }
   .feature-title { font-size: 1rem; font-weight: 700; color: var(--text1); margin-bottom: 8px; }
-  .feature-desc  { font-size: 0.85rem; color: var(--text2); line-height: 1.6; }
+  .feature-desc { font-size: 0.85rem; color: var(--text2); line-height: 1.6; }
 
-  /* ── Pricing ── */
-  .pricing-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-    gap: 20px;
-    max-width: 700px;
-  }
-
+  .pricing-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 20px; max-width: 700px; }
   .plan-card {
-    padding: 28px;
-    border: 1px solid var(--border);
-    border-radius: 24px;
-    background: var(--surf);
-    backdrop-filter: blur(16px);
-    text-align: center;
-    transition: all 0.2s;
-    position: relative;
-    overflow: hidden;
+    padding: 28px; border: 1px solid var(--border); border-radius: 24px;
+    background: var(--surf); backdrop-filter: blur(16px); text-align: center;
+    transition: all 0.2s; position: relative; overflow: hidden;
   }
-  .plan-card.featured {
-    border-color: var(--border2);
-    box-shadow: 0 0 40px rgba(28,230,96,0.12);
-  }
-  .plan-card.featured::before {
-    content: '';
-    position: absolute; top: 0; left: 0; right: 0; height: 3px;
-    background: linear-gradient(90deg, transparent, var(--accent), transparent);
-  }
+  .plan-card.featured { border-color: var(--border2); box-shadow: 0 0 40px rgba(28,230,96,0.12); }
+  .plan-card.featured::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; background: linear-gradient(90deg, transparent, var(--accent), transparent); }
   .plan-card:hover { border-color: var(--border2); transform: translateY(-4px); }
-
-  .plan-badge {
-    display: inline-block;
-    font-size: 0.65rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
-    background: rgba(28,230,96,0.15); color: var(--accent);
-    padding: 3px 10px; border-radius: 999px;
-    margin-bottom: 14px;
-  }
-
-  .plan-price {
-    font-size: 2.4rem; font-weight: 900; color: var(--accent);
-    letter-spacing: -0.04em; line-height: 1;
-    margin-bottom: 4px;
-  }
+  .plan-badge { display: inline-block; font-size: 0.65rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; background: rgba(28,230,96,0.15); color: var(--accent); padding: 3px 10px; border-radius: 999px; margin-bottom: 14px; }
+  .plan-price { font-size: 2.4rem; font-weight: 900; color: var(--accent); letter-spacing: -0.04em; line-height: 1; margin-bottom: 4px; }
   .plan-currency { font-size: 1rem; font-weight: 600; vertical-align: super; }
   .plan-period { font-size: 0.75rem; color: var(--text2); margin-bottom: 20px; }
-
   .plan-features { list-style: none; margin-bottom: 24px; }
-  .plan-features li {
-    font-size: 0.82rem; color: var(--text2);
-    padding: 6px 0; border-bottom: 1px solid rgba(255,255,255,0.04);
-    display: flex; align-items: center; gap: 8px;
-    text-align: left;
-  }
+  .plan-features li { font-size: 0.82rem; color: var(--text2); padding: 6px 0; border-bottom: 1px solid rgba(255,255,255,0.04); display: flex; align-items: center; gap: 8px; text-align: left; }
   .plan-features li:last-child { border-bottom: none; }
   .plan-features li svg { flex-shrink: 0; }
 
-  /* ── Download CTA ── */
-  .cta-section {
-    position: relative; z-index: 1;
-    padding: 80px 24px;
-    text-align: center;
-  }
+  .cta-section { position: relative; z-index: 1; padding: 80px 24px; text-align: center; }
+  .cta-card { max-width: 680px; margin: 0 auto; padding: 56px 48px; border: 1px solid var(--border2); border-radius: 28px; background: var(--surf); backdrop-filter: blur(20px); position: relative; overflow: hidden; }
+  .cta-card::before { content: ''; position: absolute; top: 0; left: 50%; transform: translateX(-50%); width: 400px; height: 400px; background: radial-gradient(circle, rgba(28,230,96,0.12) 0%, transparent 70%); pointer-events: none; }
 
-  .cta-card {
-    max-width: 680px; margin: 0 auto;
-    padding: 56px 48px;
-    border: 1px solid var(--border2);
-    border-radius: 28px;
-    background: var(--surf);
-    backdrop-filter: blur(20px);
-    position: relative; overflow: hidden;
-  }
-  .cta-card::before {
-    content: '';
-    position: absolute; top: 0; left: 50%; transform: translateX(-50%);
-    width: 400px; height: 400px;
-    background: radial-gradient(circle, rgba(28,230,96,0.12) 0%, transparent 70%);
-    pointer-events: none;
-  }
-
-  /* ── Requirements ── */
   .req-list { list-style: none; display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; margin-top: 12px; }
-  .req-list li {
-    font-size: 0.75rem; color: var(--text2);
-    background: rgba(255,255,255,0.04);
-    border: 1px solid var(--border);
-    padding: 4px 12px; border-radius: 999px;
-  }
+  .req-list li { font-size: 0.75rem; color: var(--text2); background: rgba(255,255,255,0.04); border: 1px solid var(--border); padding: 4px 12px; border-radius: 999px; }
 
-  /* ── Footer ── */
-  footer {
-    position: relative; z-index: 1;
-    border-top: 1px solid var(--border);
-    padding: 40px 24px;
-    text-align: center;
+  /* ── Contact Form ── */
+  .contact-section { position: relative; z-index: 1; padding: 80px 24px; }
+  .contact-card { max-width: 640px; margin: 0 auto; padding: 48px; border: 1px solid var(--border2); border-radius: 28px; background: var(--surf); backdrop-filter: blur(20px); position: relative; overflow: hidden; }
+  .contact-card::before { content: ''; position: absolute; top: 0; left: 50%; transform: translateX(-50%); width: 500px; height: 300px; background: radial-gradient(circle, rgba(61,232,255,0.07) 0%, transparent 70%); pointer-events: none; }
+  .form-group { margin-bottom: 20px; }
+  .form-label { display: block; font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text2); margin-bottom: 8px; }
+  .form-input {
+    width: 100%; background: rgba(0,0,0,0.3); border: 1px solid rgba(28,230,96,0.2);
+    border-radius: 12px; padding: 13px 16px; color: var(--text1); font-size: 0.9rem;
+    outline: none; transition: border-color 0.15s, box-shadow 0.15s;
+    font-family: inherit;
   }
-  .footer-brand {
-    display: flex; align-items: center; gap: 10px;
-    justify-content: center; margin-bottom: 16px;
+  .form-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(28,230,96,0.12); }
+  .form-input::placeholder { color: rgba(122,156,128,0.6); }
+  textarea.form-input { resize: vertical; min-height: 100px; }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .btn-submit {
+    width: 100%; padding: 15px; background: var(--accent); color: #030f06;
+    font-weight: 800; font-size: 1rem; border: none; border-radius: 14px;
+    cursor: pointer; transition: all 0.2s; margin-top: 8px;
   }
-  .footer-logo {
-    width: 28px; height: 28px; border-radius: 50%;
-    overflow: hidden;
-    border: 1px solid rgba(28,230,96,0.3);
-  }
+  .btn-submit:hover { filter: brightness(1.08); box-shadow: 0 0 32px rgba(28,230,96,0.4); }
+  .btn-submit:disabled { opacity: 0.5; cursor: not-allowed; filter: none; box-shadow: none; }
+  .form-msg { text-align: center; padding: 14px; border-radius: 12px; font-size: 0.85rem; margin-top: 16px; display: none; }
+  .form-msg.success { background: rgba(28,230,96,0.1); border: 1px solid rgba(28,230,96,0.25); color: var(--accent); display: block; }
+  .form-msg.error   { background: rgba(248,113,113,0.1); border: 1px solid rgba(248,113,113,0.2); color: var(--red); display: block; }
+
+  footer { position: relative; z-index: 1; border-top: 1px solid var(--border); padding: 40px 24px; text-align: center; }
+  .footer-brand { display: flex; align-items: center; gap: 10px; justify-content: center; margin-bottom: 16px; }
+  .footer-logo { width: 28px; height: 28px; border-radius: 50%; overflow: hidden; border: 1px solid rgba(28,230,96,0.3); }
   .footer-logo img { width: 100%; height: 100%; object-fit: cover; }
   .footer-name { font-size: 1rem; font-weight: 800; color: var(--text1); }
-
-  .footer-links {
-    display: flex; gap: 24px; justify-content: center;
-    margin-bottom: 16px;
-    flex-wrap: wrap;
-  }
+  .footer-links { display: flex; gap: 24px; justify-content: center; margin-bottom: 16px; flex-wrap: wrap; }
   .footer-links a { font-size: 0.8rem; color: var(--text2); text-decoration: none; transition: color 0.15s; }
   .footer-links a:hover { color: var(--accent); }
   .footer-copy { font-size: 0.75rem; color: var(--text2); }
@@ -414,18 +232,18 @@
     .hero { padding: 90px 20px 60px; }
     .logo-ring-wrap { width: 120px; height: 120px; }
     .logo-circle { width: 120px; height: 120px; }
-    .logo-ring-wrap .ring-1 { width: 200px; height: 200px; }
-    .logo-ring-wrap .ring-2 { width: 160px; height: 160px; }
-    .logo-ring-wrap .ring-3 { width: 130px; height: 130px; }
-    .cta-card { padding: 36px 24px; }
+    .ring-1 { width: 200px; height: 200px; }
+    .ring-2 { width: 160px; height: 160px; }
+    .ring-3 { width: 130px; height: 130px; }
+    .cta-card, .contact-card { padding: 32px 20px; }
     .stat-item { min-width: 100px; padding: 16px 12px; }
     .stat-value { font-size: 1.4rem; }
+    .form-row { grid-template-columns: 1fr; }
   }
 </style>
 </head>
 <body>
 
-<!-- Ambient orbs -->
 <div class="orb orb-1"></div>
 <div class="orb orb-2"></div>
 
@@ -447,7 +265,7 @@
 <section class="hero">
   <div class="hero-badge">
     <span class="dot"></span>
-    Now Live in Uganda
+    Available Worldwide
   </div>
 
   <div class="logo-ring-wrap">
@@ -459,8 +277,8 @@
     </div>
   </div>
 
-  <h1 class="hero-title">Uganda's<br>Premium VPN</h1>
-  <p class="hero-sub">Military-grade encryption. Blazing fast speeds. Complete online privacy. Built for Uganda.</p>
+  <h1 class="hero-title">The World's<br>Premium VPN</h1>
+  <p class="hero-sub">Military-grade encryption. Blazing fast speeds. Complete online privacy. Connect from anywhere, stay secure everywhere.</p>
 
   <div class="hero-actions">
     <a href="#download" class="btn-download" id="hero-download">
@@ -476,7 +294,7 @@
       </svg>
     </a>
   </div>
-  <p class="hero-price">From just <strong>500 UGX / 5 hours</strong> &nbsp;·&nbsp; No subscription required</p>
+  <p class="hero-price">Simple pay-as-you-go pricing &nbsp;·&nbsp; No subscription required</p>
 </section>
 
 <!-- ── Stats ── -->
@@ -486,12 +304,12 @@
     <div class="stat-label">Bit AES Encryption</div>
   </div>
   <div class="stat-item">
-    <div class="stat-value">500<span style="font-size:1rem;">UGX</span></div>
-    <div class="stat-label">Starting Price</div>
-  </div>
-  <div class="stat-item">
     <div class="stat-value">5G</div>
     <div class="stat-label">Ready Networks</div>
+  </div>
+  <div class="stat-item">
+    <div class="stat-value">CF</div>
+    <div class="stat-label">Edge Network</div>
   </div>
   <div class="stat-item">
     <div class="stat-value">0</div>
@@ -504,7 +322,7 @@
   <div style="text-align:center; max-width:560px; margin:0 auto 48px;">
     <span class="section-badge">Why Tera5G</span>
     <h2 class="section-title">Secure · Fast · Private</h2>
-    <p class="section-sub">Built on Xray core with VLESS protocol over Cloudflare's global edge network — reaching you wherever you are in Uganda.</p>
+    <p class="section-sub">Built on Xray core with VLESS protocol over Cloudflare's global edge network — reaching you wherever you are in the world.</p>
   </div>
 
   <div class="features-grid">
@@ -516,7 +334,7 @@
         </svg>
       </div>
       <div class="feature-title">Military-Grade Encryption</div>
-      <div class="feature-desc">AES-256 end-to-end encryption protects every byte of your data. Your connection, your privacy.</div>
+      <div class="feature-desc">AES-256 end-to-end encryption protects every byte of your data. Your connection, your privacy — always.</div>
     </div>
 
     <div class="feature-card">
@@ -536,7 +354,7 @@
         </svg>
       </div>
       <div class="feature-title">Zero-Log Policy</div>
-      <div class="feature-desc">We never store or sell your data. No activity logs, no connection logs — ever. Verified open source.</div>
+      <div class="feature-desc">We never store or sell your data. No activity logs, no connection logs — ever.</div>
     </div>
 
     <div class="feature-card">
@@ -546,7 +364,7 @@
         </svg>
       </div>
       <div class="feature-title">Smart Routing</div>
-      <div class="feature-desc">Automatically bypasses local Ugandan services through Smart mode. Choose Full Tunnel or Fast mode for your needs.</div>
+      <div class="feature-desc">Intelligently routes your traffic. Choose Smart mode to bypass local services, Full Tunnel, or Fast mode.</div>
     </div>
 
     <div class="feature-card">
@@ -565,8 +383,8 @@
           <path stroke-linecap="round" stroke-linejoin="round" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"/>
         </svg>
       </div>
-      <div class="feature-title">Pay As You Go</div>
-      <div class="feature-desc">No monthly subscriptions. Pay with MTN Mobile Money or Airtel Money. Start from just 500 UGX.</div>
+      <div class="feature-title">Flexible Payments</div>
+      <div class="feature-desc">No monthly subscriptions. Pay as you go — mobile money supported. Start for less than the price of a coffee.</div>
     </div>
 
   </div>
@@ -577,7 +395,7 @@
   <div style="text-align:center; max-width:480px; margin:0 auto 48px;">
     <span class="section-badge">Pricing</span>
     <h2 class="section-title">Simple, Affordable</h2>
-    <p class="section-sub">Pay per use with Mobile Money. No card needed.</p>
+    <p class="section-sub">Pay per use. No cards, no subscriptions, no hidden fees.</p>
   </div>
 
   <div class="pricing-grid" style="margin:0 auto;">
@@ -596,7 +414,7 @@
         </li>
         <li>
           <svg width="14" height="14" fill="none" stroke="#1CE660" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
-          MTN &amp; Airtel Money
+          Mobile Money payment
         </li>
       </ul>
     </div>
@@ -620,7 +438,7 @@
         </li>
         <li>
           <svg width="14" height="14" fill="none" stroke="#1CE660" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
-          MTN &amp; Airtel Money
+          Mobile Money payment
         </li>
       </ul>
     </div>
@@ -642,7 +460,7 @@
       Start Browsing Freely
     </h2>
     <p style="font-size:0.9rem;color:var(--text2);margin-bottom:32px;max-width:400px;margin-left:auto;margin-right:auto;line-height:1.6;">
-      Download the Tera5G APK directly — no Play Store required. Install and connect in under 60 seconds.
+      Download the Tera5G APK for Android. No Play Store required — install and connect in under 60 seconds.
     </p>
 
     <a href="/downloads/tera5g.apk" class="btn-download" download="Tera5G.apk" style="font-size:1.1rem;padding:18px 40px;">
@@ -659,8 +477,55 @@
     </ul>
 
     <p style="margin-top:20px;font-size:0.72rem;color:var(--text2);">
-      Version 1.0 &nbsp;·&nbsp; Released October 2026 &nbsp;·&nbsp; Uganda
+      Version 1.0 &nbsp;·&nbsp; Released October 2026
     </p>
+  </div>
+</section>
+
+<!-- ── Outside Uganda / Global Contact ── -->
+<section class="contact-section" id="contact">
+  <div style="text-align:center; max-width:560px; margin:0 auto 48px;">
+    <span class="section-badge">International Access</span>
+    <h2 class="section-title">Not in Uganda?</h2>
+    <p class="section-sub">
+      Tera5G is currently optimised for Ugandan payment networks. Users outside Uganda can apply below — our team will reach out to
+      <strong style="color:var(--text1);">set up your device</strong> and get you connected.
+      You can also email us directly at
+      <a href="mailto:connect@tera5g.com" style="color:var(--accent);text-decoration:none;">connect@tera5g.com</a>.
+    </p>
+  </div>
+
+  <div class="contact-card">
+    <form id="contact-form" novalidate>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label" for="cf-name">Full Name <span style="color:var(--accent)">*</span></label>
+          <input class="form-input" id="cf-name" name="name" type="text" placeholder="Jane Smith" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="cf-email">Email Address <span style="color:var(--accent)">*</span></label>
+          <input class="form-input" id="cf-email" name="email" type="email" placeholder="jane@example.com" required>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label" for="cf-country">Country <span style="color:var(--accent)">*</span></label>
+          <input class="form-input" id="cf-country" name="country" type="text" placeholder="e.g. Kenya, UK, USA" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="cf-device">Android Device Model</label>
+          <input class="form-input" id="cf-device" name="device" type="text" placeholder="e.g. Samsung Galaxy A54">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="cf-message">Anything else you'd like us to know?</label>
+        <textarea class="form-input" id="cf-message" name="message" placeholder="Tell us about your use case, device, or anything else…"></textarea>
+      </div>
+      <button class="btn-submit" id="cf-submit" type="submit">
+        Send Application
+      </button>
+      <div id="cf-msg" class="form-msg"></div>
+    </form>
   </div>
 </section>
 
@@ -675,13 +540,13 @@
     <a href="#features">Features</a>
     <a href="#pricing">Pricing</a>
     <a href="#download">Download</a>
+    <a href="#contact">International</a>
     <a href="/admin">Admin</a>
   </div>
-  <p class="footer-copy">© 2026 Tera5G · Uganda's Premium VPN · All rights reserved</p>
+  <p class="footer-copy">© 2026 Tera5G · Premium VPN · All rights reserved</p>
 </footer>
 
 <script>
-  // Smooth scroll for anchor links
   document.querySelectorAll('a[href^="#"]').forEach(a => {
     a.addEventListener('click', e => {
       const t = document.querySelector(a.getAttribute('href'));
@@ -689,15 +554,62 @@
     });
   });
 
-  // Intersection observer for fade-in
   const observer = new IntersectionObserver(entries => {
     entries.forEach(e => { if (e.isIntersecting) e.target.style.opacity = '1'; });
   }, { threshold: 0.1 });
-
   document.querySelectorAll('.feature-card, .plan-card, .stats-bar').forEach(el => {
     el.style.opacity = '0';
     el.style.transition = 'opacity 0.5s ease';
     observer.observe(el);
+  });
+
+  // Contact form submission
+  document.getElementById('contact-form').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const btn = document.getElementById('cf-submit');
+    const msg = document.getElementById('cf-msg');
+    msg.className = 'form-msg';
+    msg.textContent = '';
+
+    const body = {
+      name:    document.getElementById('cf-name').value.trim(),
+      email:   document.getElementById('cf-email').value.trim(),
+      country: document.getElementById('cf-country').value.trim(),
+      device:  document.getElementById('cf-device').value.trim(),
+      message: document.getElementById('cf-message').value.trim(),
+    };
+
+    if (!body.name)    { showMsg('error', 'Please enter your name.'); return; }
+    if (!body.email)   { showMsg('error', 'Please enter your email address.'); return; }
+    if (!body.country) { showMsg('error', 'Please enter your country.'); return; }
+
+    btn.disabled = true;
+    btn.textContent = 'Sending…';
+
+    try {
+      const res = await fetch('/api/contact', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      const data = await res.json();
+      if (res.ok && data.ok) {
+        showMsg('success', 'Application received! We\'ll be in touch at ' + body.email + ' shortly.');
+        this.reset();
+      } else {
+        showMsg('error', data.error || 'Something went wrong. Please try again.');
+      }
+    } catch {
+      showMsg('error', 'Network error. Please check your connection and try again.');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Send Application';
+    }
+
+    function showMsg(type, text) {
+      msg.className = 'form-msg ' + type;
+      msg.textContent = text;
+    }
   });
 </script>
 </body>

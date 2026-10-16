@@ -46,21 +46,13 @@ class V2RayVpnService : VpnService(), CoreCallbackHandler {
                 VpnPrefs.saveConfigJson(this, configJson)
                 startForegroundNotification("Connecting…", 0L, 0L)
                 scope.launch { startTunnel(configJson) }
-                return START_REDELIVER_INTENT         // persist across system restarts
+                return START_NOT_STICKY
             }
             ACTION_STOP -> {
                 VpnPrefs.clearConfigJson(this)
                 stopTunnel()
             }
-            null -> {
-                // System restarted the service — recover from saved config
-                val configJson = VpnPrefs.getConfigJson(this)
-                if (configJson != null && VpnPrefs.wasRunning(this)) {
-                    startForegroundNotification("Reconnecting…", 0L, 0L)
-                    scope.launch { startTunnel(configJson) }
-                    return START_REDELIVER_INTENT
-                }
-            }
+            null -> { /* system restart — do nothing, user taps reconnect */ }
         }
         return START_NOT_STICKY
     }

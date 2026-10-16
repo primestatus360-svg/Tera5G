@@ -15,6 +15,7 @@ import { accessRouter  }  from './access/accessRouter';
 import { configRouter  }  from './config/configRouter';
 import { adminRouter   }  from './admin/adminRouter';
 import { settingsRouter } from './settings/settingsRouter';
+import { contactRouter  } from './contact/contactRouter';
 
 function validateEnv(): void {
     const required: { key: string; hint: string }[] = [
@@ -108,6 +109,7 @@ app.use('/api/access',  limiter,      accessRouter);
 app.use('/api/config',  limiter,      configRouter);
 app.use('/api/admin',   adminLimiter, adminRouter);
 app.use('/api/settings', limiter,     settingsRouter);
+app.use('/api/contact', limiter,      contactRouter);
 
 app.get('/health', (_req, res) => res.json({ ok: true, version: '1.0.0', ts: Date.now() }));
 

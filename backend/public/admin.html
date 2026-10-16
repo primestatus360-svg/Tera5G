@@ -4,186 +4,272 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Tera5G · Admin</title>
-<script src="https://cdn.tailwindcss.com"></script>
-<script>
-tailwind.config = {
-  theme: {
-    extend: {
-      colors: {
-        g: {
-          50:  '#f0fdf4', 100: '#dcfce7', 200: '#bbf7d0',
-          300: '#86efac', 400: '#4ade80', 500: '#1CE660',
-          600: '#16a34a', 700: '#15803d', 800: '#166534', 900: '#14532d',
-        }
-      },
-      fontFamily: { sans: ['-apple-system','BlinkMacSystemFont','Inter','Segoe UI','sans-serif'] }
-    }
-  }
-}
-</script>
 <style>
   :root {
-    --bg:       #070c07;
-    --surf:     #0d160d;
-    --surf2:    #122012;
+    --bg:       #060b06;
+    --surf:     rgba(255,255,255,0.04);
+    --surf2:    rgba(255,255,255,0.07);
     --border:   rgba(28,230,96,.10);
-    --border2:  rgba(28,230,96,.22);
+    --border2:  rgba(28,230,96,.26);
     --accent:   #1CE660;
-    --text1:    #e2f0e4;
-    --text2:    #7a9c7e;
+    --accent2:  #3de8ff;
+    --text1:    #eaf4ec;
+    --text2:    #7a9c80;
     --red:      #f87171;
     --yellow:   #fbbf24;
   }
-  * { box-sizing: border-box; margin: 0; }
-  body { background: var(--bg); color: var(--text1); font-family: -apple-system,BlinkMacSystemFont,'Inter','Segoe UI',sans-serif; min-height: 100vh; }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text1);
+    font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
   [x-cloak] { display:none!important; }
 
-  /* Scrollbar */
-  ::-webkit-scrollbar { width: 5px; height: 5px; }
-  ::-webkit-scrollbar-track { background: var(--surf); }
-  ::-webkit-scrollbar-thumb { background: var(--surf2); border-radius: 4px; }
+  /* ── Ambient orbs ── */
+  .orb {
+    position: fixed; border-radius: 50%; pointer-events: none; z-index: 0;
+    filter: blur(100px);
+  }
+  .orb-1 { width: 700px; height: 700px; background: #1CE660; opacity: .10; top: -280px; left: 50%; transform: translateX(-50%); }
+  .orb-2 { width: 350px; height: 350px; background: #3de8ff; opacity: .05; bottom: 10%; right: -80px; }
+  .orb-3 { width: 300px; height: 300px; background: #1CE660; opacity: .06; bottom: 20%; left: -60px; }
 
-  /* Glow effects */
-  .glow-green { box-shadow: 0 0 24px rgba(28,230,96,.18), 0 0 6px rgba(28,230,96,.08); }
-  .glow-text  { text-shadow: 0 0 20px rgba(28,230,96,.4); }
+  /* ── Scrollbar ── */
+  ::-webkit-scrollbar { width: 4px; height: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: rgba(28,230,96,.25); border-radius: 4px; }
 
-  /* Spinner */
-  .spin { animation: spin .8s linear infinite; }
-  @keyframes spin { to { transform: rotate(360deg); } }
+  /* ── Keyframes ── */
+  @keyframes spin     { to { transform: rotate(360deg); } }
+  @keyframes fadeUp   { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:none; } }
+  @keyframes slideIn  { from { opacity:0; transform:translateX(20px); } to { opacity:1; transform:none; } }
+  @keyframes breathe  { 0%,100% { opacity:.10; } 50% { opacity:.22; } }
+  @keyframes shimmer  { 0% { background-position:-400px 0; } 100% { background-position:400px 0; } }
+  @keyframes blink    { 0%,100% { opacity:1; } 50% { opacity:.3; } }
 
-  /* Fade/slide animations */
-  @keyframes fadeUp   { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:none; } }
-  @keyframes slideIn  { from { opacity:0; transform:translateX(24px); } to { opacity:1; transform:none; } }
-  @keyframes pulse    { 0%,100% { opacity:1; } 50% { opacity:.5; } }
-  .anim-up   { animation: fadeUp  .3s ease both; }
-  .anim-in   { animation: slideIn .3s ease both; }
-  .pulse     { animation: pulse 2s ease-in-out infinite; }
+  .spin     { animation: spin .8s linear infinite; }
+  .anim-up  { animation: fadeUp  .35s ease both; }
+  .anim-in  { animation: slideIn .35s ease both; }
 
-  /* Sidebar nav item */
-  .nav-item { display:flex; align-items:center; gap:10px; padding:9px 12px; border-radius:10px;
-              font-size:.875rem; font-weight:500; color:var(--text2); cursor:pointer;
-              transition: all .15s; border:1px solid transparent; width:100%; background:none; }
-  .nav-item:hover { background: rgba(28,230,96,.07); color:var(--text1); }
-  .nav-item.active { background: rgba(28,230,96,.12); color:var(--accent); border-color:var(--border); }
+  /* ── Glass card ── */
+  .card {
+    background: var(--surf);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    transition: border-color .2s;
+  }
+  .card:hover { border-color: var(--border2); }
 
-  /* Card */
-  .card { background:var(--surf); border:1px solid var(--border); border-radius:16px; }
-  .card:hover { border-color:var(--border2); transition:border-color .2s; }
+  /* ── Sidebar nav item ── */
+  .nav-item {
+    display: flex; align-items: center; gap: 10px; padding: 10px 12px;
+    border-radius: 12px; font-size: .875rem; font-weight: 500;
+    color: var(--text2); cursor: pointer; transition: all .15s;
+    border: 1px solid transparent; width: 100%; background: none;
+  }
+  .nav-item:hover  { background: rgba(28,230,96,.08); color: var(--text1); }
+  .nav-item.active {
+    background: rgba(28,230,96,.12); color: var(--accent);
+    border-color: var(--border); box-shadow: inset 0 0 12px rgba(28,230,96,.06);
+  }
 
-  /* Input */
-  .inp { background:var(--bg); border:1px solid var(--border2); border-radius:10px;
-         padding:11px 14px; color:var(--text1); font-size:.875rem; width:100%;
-         transition: border-color .15s, box-shadow .15s; outline:none; }
-  .inp:focus { border-color:var(--accent); box-shadow:0 0 0 3px rgba(28,230,96,.12); }
-  .inp::placeholder { color:var(--text2); }
+  /* ── Input ── */
+  .inp {
+    background: rgba(0,0,0,.25); border: 1px solid var(--border2);
+    border-radius: 12px; padding: 12px 14px; color: var(--text1);
+    font-size: .875rem; width: 100%; outline: none;
+    backdrop-filter: blur(8px);
+    transition: border-color .15s, box-shadow .15s;
+    font-family: inherit;
+  }
+  .inp:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(28,230,96,.12); }
+  .inp::placeholder { color: var(--text2); opacity: .7; }
 
-  /* Button variants */
-  .btn { display:inline-flex; align-items:center; justify-content:center; gap:6px;
-         font-weight:600; font-size:.875rem; border-radius:10px; cursor:pointer;
-         padding:10px 18px; transition: all .15s; border:none; }
-  .btn-primary { background:var(--accent); color:#030f06; }
-  .btn-primary:hover { filter:brightness(1.08); box-shadow:0 0 16px rgba(28,230,96,.3); }
-  .btn-primary:disabled { opacity:.45; cursor:not-allowed; filter:none; box-shadow:none; }
-  .btn-ghost  { background:var(--surf2); color:var(--text1); border:1px solid var(--border); }
-  .btn-ghost:hover  { border-color:var(--border2); }
-  .btn-danger { background:rgba(248,113,113,.12); color:var(--red); border:1px solid rgba(248,113,113,.2); }
-  .btn-danger:hover { background:rgba(248,113,113,.2); }
+  /* ── Buttons ── */
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+    font-weight: 700; font-size: .875rem; border-radius: 11px; cursor: pointer;
+    padding: 10px 18px; transition: all .15s; border: none; font-family: inherit;
+  }
+  .btn-primary { background: var(--accent); color: #030f06; }
+  .btn-primary:hover  { filter: brightness(1.08); box-shadow: 0 0 20px rgba(28,230,96,.35); }
+  .btn-primary:disabled { opacity: .4; cursor: not-allowed; filter: none; box-shadow: none; }
+  .btn-ghost  { background: var(--surf2); color: var(--text1); border: 1px solid var(--border); backdrop-filter: blur(8px); }
+  .btn-ghost:hover  { border-color: var(--border2); background: rgba(28,230,96,.07); }
+  .btn-danger { background: rgba(248,113,113,.10); color: var(--red); border: 1px solid rgba(248,113,113,.18); }
+  .btn-danger:hover { background: rgba(248,113,113,.18); }
 
-  /* Toggle switch */
-  .toggle-track { position:relative; display:inline-block; width:52px; height:28px; border-radius:999px;
-                  transition: background .2s; cursor:pointer; border:none; }
-  .toggle-track.on  { background:var(--accent); box-shadow:0 0 12px rgba(28,230,96,.4); }
-  .toggle-track.off { background:var(--surf2); border:1px solid var(--border2); }
-  .toggle-thumb { position:absolute; top:3px; width:22px; height:22px; border-radius:50%;
-                  background:#fff; transition: left .2s cubic-bezier(.4,0,.2,1), box-shadow .2s; }
-  .toggle-track.on  .toggle-thumb { left:27px; box-shadow:0 1px 4px rgba(0,0,0,.3); }
-  .toggle-track.off .toggle-thumb { left:3px;  box-shadow:0 1px 4px rgba(0,0,0,.5); }
+  /* ── Toggle ── */
+  .toggle-track {
+    position: relative; display: inline-block; width: 52px; height: 28px;
+    border-radius: 999px; transition: background .2s; cursor: pointer; border: none;
+  }
+  .toggle-track.on  { background: var(--accent); box-shadow: 0 0 14px rgba(28,230,96,.45); }
+  .toggle-track.off { background: rgba(255,255,255,.1); border: 1px solid var(--border2); }
+  .toggle-thumb {
+    position: absolute; top: 3px; width: 22px; height: 22px; border-radius: 50%;
+    background: #fff; transition: left .2s cubic-bezier(.4,0,.2,1), box-shadow .2s;
+  }
+  .toggle-track.on  .toggle-thumb { left: 27px; box-shadow: 0 1px 6px rgba(0,0,0,.3); }
+  .toggle-track.off .toggle-thumb { left: 3px;  box-shadow: 0 1px 6px rgba(0,0,0,.5); }
 
-  /* Badge */
-  .badge { display:inline-flex; align-items:center; font-size:.7rem; font-weight:600;
-           padding:2px 8px; border-radius:999px; text-transform:uppercase; letter-spacing:.04em; }
-  .badge-green  { background:rgba(28,230,96,.14);  color:var(--accent); }
-  .badge-yellow { background:rgba(251,191,36,.14); color:var(--yellow); }
-  .badge-red    { background:rgba(248,113,113,.14); color:var(--red); }
-  .badge-gray   { background:var(--surf2); color:var(--text2); }
+  /* ── Badge ── */
+  .badge {
+    display: inline-flex; align-items: center; font-size: .68rem; font-weight: 700;
+    padding: 2px 9px; border-radius: 999px; text-transform: uppercase; letter-spacing: .05em;
+  }
+  .badge-green  { background: rgba(28,230,96,.14);   color: var(--accent); }
+  .badge-yellow { background: rgba(251,191,36,.14);  color: var(--yellow); }
+  .badge-red    { background: rgba(248,113,113,.14); color: var(--red); }
+  .badge-gray   { background: rgba(255,255,255,.07); color: var(--text2); border: 1px solid var(--border); }
 
-  /* Table */
-  .tbl { width:100%; border-collapse:collapse; font-size:.8rem; }
-  .tbl thead th { padding:10px 16px; text-align:left; font-size:.68rem; font-weight:700;
-                  text-transform:uppercase; letter-spacing:.06em; color:var(--text2);
-                  border-bottom:1px solid var(--border); white-space:nowrap; }
-  .tbl tbody tr { border-bottom:1px solid rgba(28,230,96,.05); transition:background .12s; }
-  .tbl tbody tr:hover { background:rgba(28,230,96,.04); }
-  .tbl tbody td { padding:12px 16px; color:var(--text1); }
-  .tbl tbody tr:last-child { border-bottom:none; }
+  /* ── Table ── */
+  .tbl { width: 100%; border-collapse: collapse; font-size: .8rem; }
+  .tbl thead th {
+    padding: 10px 16px; text-align: left; font-size: .67rem; font-weight: 700;
+    text-transform: uppercase; letter-spacing: .07em; color: var(--text2);
+    border-bottom: 1px solid var(--border); white-space: nowrap;
+  }
+  .tbl tbody tr { border-bottom: 1px solid rgba(28,230,96,.05); transition: background .12s; }
+  .tbl tbody tr:hover { background: rgba(28,230,96,.04); }
+  .tbl tbody td { padding: 12px 16px; color: var(--text1); }
+  .tbl tbody tr:last-child { border-bottom: none; }
 
-  /* Skeleton shimmer */
-  @keyframes shimmer { 0% { background-position:-400px 0; } 100% { background-position:400px 0; } }
-  .skeleton { background:linear-gradient(90deg, var(--surf) 25%, var(--surf2) 50%, var(--surf) 75%);
-              background-size:800px 100%; animation:shimmer 1.4s ease-in-out infinite; border-radius:6px; }
+  /* ── Skeleton ── */
+  .skeleton {
+    background: linear-gradient(90deg, rgba(255,255,255,.04) 25%, rgba(255,255,255,.08) 50%, rgba(255,255,255,.04) 75%);
+    background-size: 800px 100%; animation: shimmer 1.4s ease-in-out infinite; border-radius: 6px;
+  }
 
-  /* Toast */
-  #toasts { position:fixed; top:20px; right:20px; z-index:9999; display:flex; flex-direction:column; gap:8px; pointer-events:none; }
-  .toast { display:flex; align-items:center; gap:10px; padding:12px 16px; border-radius:12px;
-           background:var(--surf2); border:1px solid var(--border2); min-width:260px; max-width:360px;
-           box-shadow:0 8px 32px rgba(0,0,0,.5); pointer-events:all;
-           animation:slideIn .25s ease both; font-size:.85rem; }
-  .toast-success { border-color:rgba(28,230,96,.3); }
-  .toast-error   { border-color:rgba(248,113,113,.3); }
+  /* ── Toast ── */
+  #toasts { position: fixed; top: 20px; right: 20px; z-index: 9999; display: flex; flex-direction: column; gap: 8px; pointer-events: none; }
+  .toast {
+    display: flex; align-items: center; gap: 10px; padding: 13px 16px; border-radius: 14px;
+    background: rgba(10,20,10,.85); backdrop-filter: blur(24px);
+    border: 1px solid var(--border2); min-width: 260px; max-width: 360px;
+    box-shadow: 0 12px 40px rgba(0,0,0,.5); pointer-events: all;
+    animation: slideIn .25s ease both; font-size: .85rem;
+  }
+  .toast-success { border-color: rgba(28,230,96,.35); }
+  .toast-error   { border-color: rgba(248,113,113,.3); }
 
-  /* Stat card number */
-  .stat-num { font-size:2rem; font-weight:800; letter-spacing:-.03em; line-height:1; }
+  /* ── Stat number ── */
+  .stat-num {
+    font-size: 2.2rem; font-weight: 900; letter-spacing: -.04em; line-height: 1;
+    background: linear-gradient(135deg, currentColor 0%, rgba(255,255,255,.7) 100%);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+  }
 
-  /* Section header */
-  .section-head { font-size:1.25rem; font-weight:700; color:var(--text1); }
+  /* ── Section header ── */
+  .section-head {
+    font-size: 1.3rem; font-weight: 800; letter-spacing: -.02em;
+    background: linear-gradient(135deg, var(--text1) 0%, rgba(28,230,96,.8) 100%);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+  }
 
-  /* Modal */
-  .modal-bg { position:fixed; inset:0; background:rgba(0,0,0,.7); backdrop-filter:blur(4px);
-              display:flex; align-items:center; justify-content:center; z-index:50; padding:16px; }
-  .modal { background:var(--surf); border:1px solid var(--border2); border-radius:20px;
-           padding:28px; width:100%; max-width:420px; box-shadow:0 24px 64px rgba(0,0,0,.6); }
+  /* ── Modal ── */
+  .modal-bg {
+    position: fixed; inset: 0; background: rgba(0,0,0,.75); backdrop-filter: blur(8px);
+    display: flex; align-items: center; justify-content: center; z-index: 50; padding: 16px;
+  }
+  .modal {
+    background: rgba(8,16,8,.92); backdrop-filter: blur(32px); -webkit-backdrop-filter: blur(32px);
+    border: 1px solid var(--border2); border-radius: 22px;
+    padding: 30px; width: 100%; max-width: 420px; box-shadow: 0 24px 80px rgba(0,0,0,.7);
+  }
 
-  /* Layout helpers used on x-show elements — Alpine only toggles display:none inline;
-     removing it restores these class-driven display values */
-  .login-wrapper { display:flex; align-items:center; justify-content:center;
-                   min-height:100vh; padding:24px; }
-  .app-wrapper   { display:flex; min-height:100vh; }
-  .tab-pane      { display:flex; flex-direction:column; gap:24px; }
+  /* ── Login ring logo ── */
+  .login-logo-wrap {
+    position: relative; width: 100px; height: 100px; margin: 0 auto 28px;
+  }
+  .login-logo-wrap .ring {
+    position: absolute; border-radius: 50%; top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    background: radial-gradient(circle, rgba(28,230,96,.22) 0%, transparent 70%);
+    animation: breathe 3s ease-in-out infinite;
+  }
+  .login-logo-wrap .ring-1 { width: 180px; height: 180px; animation-delay: 0s; }
+  .login-logo-wrap .ring-2 { width: 145px; height: 145px; animation-delay: .4s; }
+  .login-logo-img {
+    position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%);
+    width: 100px; height: 100px; border-radius: 50%; overflow: hidden; z-index: 2;
+    border: 2px solid rgba(28,230,96,.45);
+    box-shadow: 0 0 40px rgba(28,230,96,.3), inset 0 0 20px rgba(28,230,96,.08);
+    background: rgba(28,230,96,.06);
+  }
+  .login-logo-img img { width: 100%; height: 100%; object-fit: cover; }
+
+  /* ── Layout ── */
+  .login-wrapper { display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 24px; position: relative; z-index: 1; }
+  .app-wrapper   { display: flex; min-height: 100vh; position: relative; z-index: 1; }
+  .tab-pane      { display: flex; flex-direction: column; gap: 24px; }
+
+  /* ── Sidebar ── */
+  .sidebar {
+    width: 228px; flex-shrink: 0; position: sticky; top: 0; height: 100vh;
+    background: rgba(6,12,6,.7);
+    backdrop-filter: blur(28px); -webkit-backdrop-filter: blur(28px);
+    border-right: 1px solid var(--border);
+    display: flex; flex-direction: column;
+  }
+
+  /* ── Glow dot (live indicator) ── */
+  .live-dot {
+    width: 7px; height: 7px; border-radius: 50%; background: var(--accent);
+    animation: blink 1.6s ease-in-out infinite;
+    box-shadow: 0 0 6px rgba(28,230,96,.6);
+  }
 </style>
 </head>
 
 <body x-data="app()" x-init="init()">
+
+<!-- ── Ambient orbs ── -->
+<div class="orb orb-1"></div>
+<div class="orb orb-2"></div>
+<div class="orb orb-3"></div>
+
 <!-- ─── TOASTS ──────────────────────────────────────────────────────────────── -->
 <div id="toasts"></div>
 
 <!-- ═══════════════════════════════ LOGIN ═══════════════════════════════════ -->
 <div x-show="!authed" class="login-wrapper">
-  <div style="width:100%;max-width:360px;" class="anim-up">
+  <div style="width:100%;max-width:360px;text-align:center;" class="anim-up">
 
-    <!-- Logo mark -->
-    <div style="text-align:center;margin-bottom:36px;">
-      <div style="display:inline-flex;align-items:center;justify-content:center;
-                  width:64px;height:64px;border-radius:18px;background:rgba(28,230,96,.12);
-                  border:1px solid rgba(28,230,96,.25);margin-bottom:16px;">
-        <svg width="32" height="32" viewBox="0 0 24 24" fill="none">
-          <path d="M12 2L2 7l10 5 10-5-10-5z" stroke="#1CE660" stroke-width="1.8" stroke-linejoin="round"/>
-          <path d="M2 17l10 5 10-5" stroke="#1CE660" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" opacity=".6"/>
-          <path d="M2 12l10 5 10-5" stroke="#1CE660" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" opacity=".3"/>
-        </svg>
+    <!-- Animated ring logo -->
+    <div class="login-logo-wrap">
+      <div class="ring ring-1"></div>
+      <div class="ring ring-2"></div>
+      <div class="login-logo-img">
+        <img src="/logo.png" alt="Tera5G">
       </div>
-      <div style="font-size:1.6rem;font-weight:800;letter-spacing:-.02em;color:var(--text1);">Tera5G</div>
-      <div style="font-size:.8rem;color:var(--text2);margin-top:4px;letter-spacing:.08em;text-transform:uppercase;">Admin Console</div>
     </div>
 
-    <div class="card" style="padding:28px;">
+    <div style="font-size:1.9rem;font-weight:900;letter-spacing:-.03em;margin-bottom:6px;
+                background:linear-gradient(135deg,#e8faea 0%,#1CE660 60%,#3de8ff 100%);
+                -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">
+      Tera5G
+    </div>
+    <div style="font-size:.72rem;color:var(--text2);letter-spacing:.12em;text-transform:uppercase;margin-bottom:36px;font-weight:600;">
+      Admin Console
+    </div>
+
+    <div class="card" style="padding:28px;text-align:left;">
       <label style="display:block;font-size:.72rem;font-weight:700;color:var(--text2);
                     text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;">Admin Key</label>
       <input class="inp" x-model="loginKey" type="password" placeholder="Enter your admin key"
              @keydown.enter="login()" style="margin-bottom:16px;" />
       <div x-show="loginErr" style="font-size:.8rem;color:var(--red);margin-bottom:12px;padding:10px 12px;
-           background:rgba(248,113,113,.08);border-radius:8px;border:1px solid rgba(248,113,113,.2);"
+           background:rgba(248,113,113,.08);border-radius:10px;border:1px solid rgba(248,113,113,.2);"
            x-text="loginErr"></div>
-      <button class="btn btn-primary" @click="login()" :disabled="loginBusy" style="width:100%;padding:13px;">
+      <button class="btn btn-primary" @click="login()" :disabled="loginBusy" style="width:100%;padding:14px;font-size:.95rem;">
         <svg x-show="loginBusy" class="spin" width="16" height="16" fill="none" viewBox="0 0 24 24">
           <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" opacity=".25"/>
           <path d="M4 12a8 8 0 018-8" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
@@ -191,6 +277,10 @@ tailwind.config = {
         <span x-text="loginBusy ? 'Verifying…' : 'Sign In'"></span>
       </button>
     </div>
+
+    <p style="margin-top:20px;font-size:.72rem;color:var(--text2);opacity:.5;">
+      Tera5G · Secure Admin Access
+    </p>
   </div>
 </div>
 
@@ -198,48 +288,54 @@ tailwind.config = {
 <div x-show="authed" class="app-wrapper">
 
   <!-- ── Sidebar ─────────────────────────────────────────────────────────── -->
-  <aside style="width:220px;background:var(--surf);border-right:1px solid var(--border);
-                display:flex;flex-direction:column;flex-shrink:0;position:sticky;top:0;height:100vh;">
+  <aside class="sidebar">
 
     <!-- Brand -->
     <div style="padding:22px 18px 18px;border-bottom:1px solid var(--border);">
       <div style="display:flex;align-items:center;gap:10px;">
-        <div style="width:32px;height:32px;border-radius:8px;background:rgba(28,230,96,.15);
-                    border:1px solid rgba(28,230,96,.25);display:flex;align-items:center;justify-content:center;">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-            <path d="M12 2L2 7l10 5 10-5-10-5z" stroke="#1CE660" stroke-width="2" stroke-linejoin="round"/>
-            <path d="M2 17l10 5 10-5M2 12l10 5 10-5" stroke="#1CE660" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" opacity=".5"/>
-          </svg>
+        <div style="width:36px;height:36px;border-radius:10px;background:rgba(28,230,96,.12);
+                    border:1px solid rgba(28,230,96,.25);display:flex;align-items:center;justify-content:center;
+                    box-shadow:0 0 16px rgba(28,230,96,.15);">
+          <img src="/logo.png" alt="" style="width:24px;height:24px;border-radius:50%;object-fit:cover;">
         </div>
         <div>
-          <div style="font-size:.95rem;font-weight:800;letter-spacing:-.01em;color:var(--text1);">Tera5G</div>
-          <div style="font-size:.65rem;color:var(--text2);letter-spacing:.06em;text-transform:uppercase;">Admin</div>
+          <div style="font-size:1rem;font-weight:900;letter-spacing:-.02em;
+                      background:linear-gradient(135deg,var(--text1) 0%,#1CE660 100%);
+                      -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">
+            Tera5G
+          </div>
+          <div style="font-size:.62rem;color:var(--text2);letter-spacing:.1em;text-transform:uppercase;font-weight:600;">Admin Console</div>
         </div>
       </div>
     </div>
 
     <!-- Nav -->
-    <nav style="flex:1;padding:12px 10px;display:flex;flex-direction:column;gap:2px;overflow-y:auto;">
+    <nav style="flex:1;padding:14px 10px;display:flex;flex-direction:column;gap:3px;overflow-y:auto;">
       <template x-for="t in tabs" :key="t.id">
         <button class="nav-item" :class="active===t.id && 'active'" @click="switchTab(t.id)">
           <span x-html="t.icon" style="width:18px;height:18px;flex-shrink:0;"></span>
           <span x-text="t.label"></span>
           <span x-show="t.id==='settings' && paywallEnabled===false"
-                style="margin-left:auto;width:6px;height:6px;border-radius:50%;background:var(--accent);"></span>
+                class="live-dot" style="margin-left:auto;"></span>
         </button>
       </template>
     </nav>
 
-    <!-- Footer -->
-    <div style="padding:10px;border-top:1px solid var(--border);">
-      <div style="padding:8px 12px;margin-bottom:6px;font-size:.72rem;color:var(--text2);
-                  background:rgba(28,230,96,.05);border-radius:8px;border:1px solid var(--border);">
-        <div style="font-weight:600;margin-bottom:2px;color:var(--text1);">Paywall</div>
-        <div x-text="paywallEnabled ? '🔒 Enabled' : '🟢 Disabled (free)'"
-             :style="paywallEnabled ? '' : 'color:var(--accent)'"></div>
+    <!-- Paywall status + sign out -->
+    <div style="padding:12px;border-top:1px solid var(--border);">
+      <div style="padding:10px 12px;margin-bottom:8px;border-radius:12px;
+                  background:rgba(28,230,96,.06);border:1px solid var(--border);">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:3px;">
+          <span class="live-dot" x-show="!paywallEnabled"></span>
+          <span style="font-weight:700;font-size:.78rem;color:var(--text1);">Paywall</span>
+          <span :class="paywallEnabled ? 'badge-gray' : 'badge-green'" class="badge"
+                x-text="paywallEnabled ? 'ON' : 'OFF'" style="margin-left:auto;font-size:.6rem;"></span>
+        </div>
+        <div style="font-size:.72rem;color:var(--text2);"
+             x-text="paywallEnabled ? 'Payment required to connect' : 'Free access for all users'"></div>
       </div>
-      <button class="nav-item" @click="logout()" style="color:var(--red);">
-        <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <button class="nav-item" @click="logout()" style="color:var(--red);font-size:.82rem;">
+        <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                 d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
         </svg>
@@ -249,7 +345,7 @@ tailwind.config = {
   </aside>
 
   <!-- ── Main content ────────────────────────────────────────────────────── -->
-  <main style="flex:1;overflow:auto;padding:32px;max-width:1100px;">
+  <main style="flex:1;overflow:auto;padding:32px 36px;max-width:1100px;">
 
     <!-- ══ DASHBOARD ══════════════════════════════════════════════════════ -->
     <div x-show="active==='dashboard'" class="tab-pane">
@@ -283,13 +379,13 @@ tailwind.config = {
         <div class="card" style="padding:22px 20px;">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
             <span style="font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--text2);">Total Payments</span>
-            <div style="width:32px;height:32px;border-radius:8px;background:rgba(99,179,237,.1);display:flex;align-items:center;justify-content:center;">
-              <svg width="15" height="15" fill="none" stroke="#63b3ed" viewBox="0 0 24 24">
+            <div style="width:32px;height:32px;border-radius:8px;background:rgba(61,232,255,.08);display:flex;align-items:center;justify-content:center;">
+              <svg width="15" height="15" fill="none" stroke="#3de8ff" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/>
               </svg>
             </div>
           </div>
-          <div class="stat-num" style="color:#63b3ed;" x-text="stats.totalPayments ?? '—'"></div>
+          <div class="stat-num" style="color:#3de8ff;" x-text="stats.totalPayments ?? '—'"></div>
         </div>
 
         <div class="card" style="padding:22px 20px;">
@@ -645,6 +741,111 @@ tailwind.config = {
       </div>
     </div>
 
+    <!-- ══ APPLICATIONS ═════════════════════════════════════════════════ -->
+    <div x-show="active==='applications'" class="tab-pane">
+
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+        <div>
+          <h1 class="section-head">International Applications</h1>
+          <p style="font-size:.8rem;color:var(--text2);margin-top:4px;">Users outside Uganda who have applied via the website.</p>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <select class="inp" x-model="appsFilter" @change="appsPage=1; loadApplications()" style="width:auto;padding:8px 12px;">
+            <option value="all">All statuses</option>
+            <option value="pending">Pending</option>
+            <option value="contacted">Contacted</option>
+            <option value="approved">Approved</option>
+            <option value="rejected">Rejected</option>
+          </select>
+          <button class="btn btn-ghost" @click="loadApplications()" style="padding:8px 14px;font-size:.78rem;">
+            <svg :class="appsLoading && 'spin'" width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M4 4v5h5M20 20v-5h-5M20 9A8 8 0 005.3 5.3M4 15a8 8 0 0014.7 3.7"/>
+            </svg>
+            Refresh
+          </button>
+        </div>
+      </div>
+
+      <div class="card" style="overflow:hidden;">
+        <div style="overflow-x:auto;">
+          <table class="tbl">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Email</th>
+                <th>Country</th>
+                <th>Device</th>
+                <th>Status</th>
+                <th>Date</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              <template x-if="appsLoading">
+                <template x-for="i in 5" :key="i">
+                  <tr><td colspan="7" style="padding:10px 16px;"><div class="skeleton" style="height:14px;width:100%;"></div></td></tr>
+                </template>
+              </template>
+              <tr x-show="!appsLoading && applications.length===0">
+                <td colspan="7" style="text-align:center;padding:40px;color:var(--text2);">
+                  <svg width="32" height="32" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="margin:0 auto 10px;opacity:.3;display:block;">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+                  </svg>
+                  No applications yet
+                </td>
+              </tr>
+              <template x-for="a in applications" :key="a.id">
+                <tr>
+                  <td style="font-weight:600;color:var(--text1);" x-text="a.name"></td>
+                  <td>
+                    <a :href="'mailto:'+a.email" style="color:var(--accent);text-decoration:none;font-size:.8rem;" x-text="a.email"></a>
+                  </td>
+                  <td style="color:var(--text1);" x-text="a.country"></td>
+                  <td style="color:var(--text2);font-size:.78rem;" x-text="a.device || '—'"></td>
+                  <td>
+                    <span :class="{
+                      'badge-yellow': a.status==='pending',
+                      'badge-green':  a.status==='approved' || a.status==='contacted',
+                      'badge-red':    a.status==='rejected',
+                      'badge-gray':   !['pending','approved','contacted','rejected'].includes(a.status)
+                    }" class="badge" x-text="a.status"></span>
+                  </td>
+                  <td style="color:var(--text2);white-space:nowrap;" x-text="fmtDate(a.created_at)"></td>
+                  <td style="text-align:right;">
+                    <div style="display:flex;gap:6px;justify-content:flex-end;">
+                      <button x-show="a.status==='pending'" class="btn btn-ghost"
+                              @click="updateAppStatus(a.id,'contacted')"
+                              style="padding:4px 10px;font-size:.72rem;">Contacted</button>
+                      <button x-show="a.status!=='approved'" class="btn btn-primary"
+                              @click="updateAppStatus(a.id,'approved')"
+                              style="padding:4px 10px;font-size:.72rem;">Approve</button>
+                      <button x-show="a.status!=='rejected'" class="btn btn-danger"
+                              @click="updateAppStatus(a.id,'rejected')"
+                              style="padding:4px 10px;font-size:.72rem;">Reject</button>
+                    </div>
+                  </td>
+                </tr>
+              </template>
+            </tbody>
+          </table>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-top:1px solid var(--border);">
+          <span style="font-size:.75rem;color:var(--text2);">
+            Page <strong x-text="appsPage"></strong>
+            <span x-show="applications.length > 0"> · <span x-text="applications.length"></span> entries</span>
+          </span>
+          <div style="display:flex;gap:8px;">
+            <button class="btn btn-ghost" @click="appsPage--;loadApplications()" :disabled="appsPage<=1"
+                    style="padding:6px 12px;font-size:.75rem;">← Prev</button>
+            <button class="btn btn-ghost" @click="appsPage++;loadApplications()" :disabled="applications.length<50"
+                    style="padding:6px 12px;font-size:.75rem;">Next →</button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
     <!-- ══ SETTINGS ═══════════════════════════════════════════════════════ -->
     <div x-show="active==='settings'" class="tab-pane">
 
@@ -791,6 +992,7 @@ function app() {
       { id: 'devices',   label: 'Devices',   icon: `<svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="18" height="18"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>` },
       { id: 'withdraw',  label: 'Withdraw',  icon: `<svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="18" height="18"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"/></svg>` },
       { id: 'config',    label: 'VPN Config', icon: `<svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="18" height="18"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01"/></svg>` },
+      { id: 'applications', label: 'Applications', icon: `<svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="18" height="18"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>` },
       { id: 'settings',  label: 'Settings',  icon: `<svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="18" height="18"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>` },
     ],
 
@@ -810,6 +1012,9 @@ function app() {
 
     /* ── Withdraw ── */
     wd: { phone: '', amount: '', provider: 'MTN', busy: false },
+
+    /* ── Applications ── */
+    applications: [], appsLoading: false, appsPage: 1, appsFilter: 'all',
 
     /* ── Config ── */
     cfg: { json: '', busy: false },
@@ -855,8 +1060,9 @@ function app() {
       this.loadStats();
       this.loadPaywall();
       this.$watch('active', tab => {
-        if (tab === 'payments') this.loadPayments();
-        if (tab === 'devices')  this.loadDevices();
+        if (tab === 'payments')     this.loadPayments();
+        if (tab === 'devices')      this.loadDevices();
+        if (tab === 'applications') this.loadApplications();
       });
     },
 
@@ -991,6 +1197,29 @@ function app() {
         }
       } catch { toast('Network error.', 'error'); }
       finally { this.wd.busy = false; }
+    },
+
+    /* ════════════════ APPLICATIONS ════════════════ */
+    async loadApplications() {
+      this.appsLoading = true;
+      try {
+        const d = await this.api(`/api/admin/applications?page=${this.appsPage}&limit=50&status=${this.appsFilter}`);
+        if (d.error) { toast(d.error, 'error'); return; }
+        this.applications = d.applications ?? [];
+      } catch { toast('Failed to load applications', 'error'); }
+      finally { this.appsLoading = false; }
+    },
+
+    async updateAppStatus(id, status) {
+      const d = await this.api(`/api/admin/applications/${id}/status`, {
+        method: 'POST', body: JSON.stringify({ status }),
+      });
+      if (d.ok) {
+        toast(`Marked as ${status}.`, 'success');
+        this.loadApplications();
+      } else {
+        toast(d.error || 'Update failed.', 'error');
+      }
     },
 
     /* ════════════════ VPN CONFIG ════════════════ */

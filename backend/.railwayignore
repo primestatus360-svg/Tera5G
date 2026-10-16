@@ -1,2 +1,2 @@
-# Skip large binaries from CLI uploads — GitHub auto-deploy handles these
+# APK excluded from CLI uploads (too large) — deploy via GitHub auto-deploy instead
 public/downloads/*.apk

@@ -226,6 +226,63 @@
     animation: blink 1.6s ease-in-out infinite;
     box-shadow: 0 0 6px rgba(28,230,96,.6);
   }
+
+  /* ── Mobile top bar (hidden on desktop) ── */
+  .mobile-bar {
+    display: none; position: fixed; top: 0; left: 0; right: 0; z-index: 300;
+    height: 56px; padding: 0 16px;
+    align-items: center; justify-content: space-between;
+    background: rgba(6,10,6,.85); backdrop-filter: blur(20px);
+    border-bottom: 1px solid var(--border);
+  }
+  .hamburger {
+    background: none; border: none; cursor: pointer; padding: 6px;
+    color: var(--text1); display: flex; flex-direction: column; gap: 4px;
+  }
+  .hamburger span { display: block; width: 20px; height: 2px; background: var(--text1); border-radius: 2px; transition: all .2s; }
+
+  /* Sidebar overlay backdrop */
+  .sidebar-backdrop {
+    display: none; position: fixed; inset: 0; background: rgba(0,0,0,.6);
+    backdrop-filter: blur(2px); z-index: 199;
+  }
+
+  /* ── Mobile breakpoint ── */
+  @media (max-width: 768px) {
+    .mobile-bar { display: flex; }
+
+    .sidebar {
+      position: fixed; left: -240px; top: 0; z-index: 200;
+      height: 100vh; width: 240px;
+      transition: left .25s cubic-bezier(.4,0,.2,1);
+    }
+    .sidebar.open { left: 0; }
+    .sidebar-backdrop.open { display: block; }
+
+    .app-wrapper { flex-direction: column; }
+
+    main {
+      padding: 72px 16px 24px !important;
+      max-width: 100% !important;
+    }
+
+    .tab-pane { gap: 16px; }
+
+    /* Stat cards — 2 columns on mobile */
+    .stat-grid { grid-template-columns: repeat(2, 1fr) !important; gap: 10px !important; }
+
+    .section-head { font-size: 1.1rem !important; }
+
+    /* Tables — horizontal scroll */
+    .tbl-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    .tbl { min-width: 520px; }
+
+    /* Modal full-width on mobile */
+    .modal { padding: 22px 18px; border-radius: 16px; }
+
+    /* Form rows stack */
+    .form-row-2 { grid-template-columns: 1fr !important; }
+  }
 </style>
 </head>
 
@@ -238,6 +295,24 @@
 
 <!-- ─── TOASTS ──────────────────────────────────────────────────────────────── -->
 <div id="toasts"></div>
+
+<!-- ─── MOBILE TOP BAR ────────────────────────────────────────────────────── -->
+<div class="mobile-bar" x-show="authed">
+  <button class="hamburger" @click="sidebarOpen=!sidebarOpen" aria-label="Menu">
+    <span></span><span></span><span></span>
+  </button>
+  <div style="display:flex;align-items:center;gap:8px;">
+    <img src="/logo.png" style="width:26px;height:26px;border-radius:50%;border:1px solid rgba(28,230,96,.4);">
+    <span style="font-size:.95rem;font-weight:900;background:linear-gradient(135deg,var(--text1),#1CE660);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">Tera5G</span>
+  </div>
+  <div style="display:flex;align-items:center;gap:6px;">
+    <span class="live-dot"></span>
+    <span style="font-size:.68rem;color:var(--text2);text-transform:uppercase;letter-spacing:.06em;">Live</span>
+  </div>
+</div>
+
+<!-- Sidebar backdrop for mobile -->
+<div class="sidebar-backdrop" :class="sidebarOpen && 'open'" @click="sidebarOpen=false"></div>
 
 <!-- ═══════════════════════════════ LOGIN ═══════════════════════════════════ -->
 <div x-show="!authed" class="login-wrapper">
@@ -288,7 +363,7 @@
 <div x-show="authed" class="app-wrapper">
 
   <!-- ── Sidebar ─────────────────────────────────────────────────────────── -->
-  <aside class="sidebar">
+  <aside class="sidebar" :class="sidebarOpen && 'open'">
 
     <!-- Brand -->
     <div style="padding:22px 18px 18px;border-bottom:1px solid var(--border);">
@@ -312,7 +387,7 @@
     <!-- Nav -->
     <nav style="flex:1;padding:14px 10px;display:flex;flex-direction:column;gap:3px;overflow-y:auto;">
       <template x-for="t in tabs" :key="t.id">
-        <button class="nav-item" :class="active===t.id && 'active'" @click="switchTab(t.id)">
+        <button class="nav-item" :class="active===t.id && 'active'" @click="switchTab(t.id); sidebarOpen=false">
           <span x-html="t.icon" style="width:18px;height:18px;flex-shrink:0;"></span>
           <span x-text="t.label"></span>
           <span x-show="t.id==='settings' && paywallEnabled===false"
@@ -350,8 +425,14 @@
     <!-- ══ DASHBOARD ══════════════════════════════════════════════════════ -->
     <div x-show="active==='dashboard'" class="tab-pane">
 
-      <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;">
-        <h1 class="section-head">Dashboard</h1>
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;">
+        <div style="display:flex;align-items:center;gap:10px;">
+          <h1 class="section-head">Dashboard</h1>
+          <div style="display:flex;align-items:center;gap:5px;background:rgba(28,230,96,.08);border:1px solid var(--border);border-radius:999px;padding:3px 10px;">
+            <span class="live-dot"></span>
+            <span style="font-size:.65rem;color:var(--accent);font-weight:700;letter-spacing:.06em;text-transform:uppercase;">Live</span>
+          </div>
+        </div>
         <button class="btn btn-ghost" @click="loadStats()" style="font-size:.78rem;padding:8px 14px;">
           <svg :class="statsLoading && 'spin'" width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -362,7 +443,7 @@
       </div>
 
       <!-- Stat cards -->
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:16px;">
+      <div class="stat-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:16px;">
 
         <div class="card" style="padding:22px 20px;">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
@@ -481,7 +562,7 @@
       </div>
 
       <div class="card" style="overflow:hidden;">
-        <div style="overflow-x:auto;">
+        <div class="tbl-wrap">
           <table class="tbl">
             <thead>
               <tr>
@@ -576,7 +657,7 @@
       </div>
 
       <div class="card" style="overflow:hidden;">
-        <div style="overflow-x:auto;">
+        <div class="tbl-wrap">
           <table class="tbl">
             <thead>
               <tr>
@@ -768,7 +849,7 @@
       </div>
 
       <div class="card" style="overflow:hidden;">
-        <div style="overflow-x:auto;">
+        <div class="tbl-wrap">
           <table class="tbl">
             <thead>
               <tr>
@@ -984,6 +1065,9 @@ function app() {
     /* ── Auth ── */
     authed: false, loginKey: '', loginErr: '', loginBusy: false, adminKey: '',
 
+    /* ── Mobile ── */
+    sidebarOpen: false,
+
     /* ── Navigation ── */
     active: 'dashboard',
     tabs: [
@@ -1059,11 +1143,31 @@ function app() {
     onAuthed() {
       this.loadStats();
       this.loadPaywall();
+      this.startAutoRefresh();
       this.$watch('active', tab => {
         if (tab === 'payments')     this.loadPayments();
         if (tab === 'devices')      this.loadDevices();
         if (tab === 'applications') this.loadApplications();
       });
+    },
+
+    startAutoRefresh() {
+      // Silently refresh stats every 15 seconds
+      setInterval(async () => {
+        if (!this.authed) return;
+        try {
+          const d = await this.api('/api/admin/stats');
+          if (!d.error) this.stats = d;
+        } catch {}
+      }, 15_000);
+
+      // Refresh the active data tab every 20 seconds
+      setInterval(() => {
+        if (!this.authed) return;
+        if (this.active === 'devices')      this.loadDevices();
+        if (this.active === 'payments')     this.loadPayments();
+        if (this.active === 'applications') this.loadApplications();
+      }, 20_000);
     },
 
     switchTab(id) {

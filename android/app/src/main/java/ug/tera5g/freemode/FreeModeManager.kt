@@ -83,7 +83,7 @@ object FreeModeManager {
                             "keepAlive"  to 25
                         )),
                         "mtu"            to 1420,
-                        "kernelTun"      to false,
+                        "noKernelTun"    to true,
                         "domainStrategy" to "ForceIPv4"
                     )
                 ),

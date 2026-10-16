@@ -123,7 +123,7 @@ class V2RayVpnService : VpnService(), CoreCallbackHandler {
 
             startNotifStatsLoop()
 
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Log.e(TAG, "Failed to start tunnel", e)
             stopTunnel()
             V2RayController.onStateChanged(VpnState.ERROR)

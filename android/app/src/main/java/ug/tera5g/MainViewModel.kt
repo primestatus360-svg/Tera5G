@@ -140,7 +140,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             return
         }
 
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             val configs = FreeModeManager.loadConfigs(ctx)
             if (configs.isEmpty()) {
                 V2RayController.onStateChanged(VpnState.ERROR)

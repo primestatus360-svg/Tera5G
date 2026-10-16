@@ -1,7 +1,10 @@
 package ug.tera5g.v2ray
 
 import android.app.*
+import android.content.BroadcastReceiver
+import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.net.TrafficStats
 import android.net.VpnService
 import android.os.*
@@ -13,6 +16,7 @@ import libv2ray.CoreController
 import libv2ray.Libv2ray
 import ug.tera5g.R
 import ug.tera5g.MainActivity
+import java.util.concurrent.TimeUnit
 
 class V2RayVpnService : VpnService(), CoreCallbackHandler {
 
@@ -35,7 +39,22 @@ class V2RayVpnService : VpnService(), CoreCallbackHandler {
     private var tun2socksProcess: java.lang.Process? = null
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
+    // Catch system power-off and cleanly release the TUN fd before Android
+    // tears down the network stack — prevents freeze on next boot.
+    private val shutdownReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            Log.i(TAG, "System shutdown — stopping VPN")
+            VpnPrefs.clearConfigJson(this@V2RayVpnService)
+            stopTunnel()
+        }
+    }
+
     // ── VpnService lifecycle ──────────────────────────────────────────────
+
+    override fun onCreate() {
+        super.onCreate()
+        registerReceiver(shutdownReceiver, IntentFilter(Intent.ACTION_SHUTDOWN))
+    }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
@@ -64,6 +83,7 @@ class V2RayVpnService : VpnService(), CoreCallbackHandler {
     }
 
     override fun onDestroy() {
+        try { unregisterReceiver(shutdownReceiver) } catch (_: Exception) {}
         stopTunnel()
         scope.cancel()
         super.onDestroy()
@@ -115,11 +135,29 @@ class V2RayVpnService : VpnService(), CoreCallbackHandler {
         isRunning = false
         VpnPrefs.setRunning(this, false)
         try {
-            tun2socksProcess?.destroy(); tun2socksProcess = null
-            pfd?.close();               pfd = null
+            // Close the TUN fd first — this causes tun2socks to get a read
+            // error and exit on its own, releasing any kernel VPN resources
+            // before we forcibly kill it.
+            pfd?.close(); pfd = null
+        } catch (e: Exception) {
+            Log.e(TAG, "Error closing TUN fd", e)
+        }
+        try {
+            tun2socksProcess?.let { proc ->
+                proc.destroy()
+                if (!proc.waitFor(3, TimeUnit.SECONDS)) {
+                    proc.destroyForcibly()
+                    proc.waitFor(1, TimeUnit.SECONDS)
+                }
+            }
+            tun2socksProcess = null
+        } catch (e: Exception) {
+            Log.e(TAG, "Error stopping tun2socks", e)
+        }
+        try {
             coreController?.stopLoop(); coreController = null
         } catch (e: Exception) {
-            Log.e(TAG, "Error stopping tunnel", e)
+            Log.e(TAG, "Error stopping core", e)
         }
         V2RayController.onStateChanged(VpnState.DISCONNECTED)
         stopForeground(STOP_FOREGROUND_REMOVE)

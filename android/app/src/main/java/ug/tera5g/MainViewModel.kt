@@ -14,6 +14,7 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 import ug.tera5g.config.*
 import ug.tera5g.core.AccessToken
+import ug.tera5g.freemode.FreeModeManager
 import ug.tera5g.payment.PaymentRepository
 import ug.tera5g.v2ray.V2RayController
 import ug.tera5g.v2ray.VpnState
@@ -104,6 +105,10 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     private fun startVpn() {
+        if (_connectionMode.value == ConnectionMode.FREE_BROWSE) {
+            startFreeModeTunnel()
+            return
+        }
         val ctx = getApplication<Application>()
 
         val permIntent = VpnService.prepare(ctx)
@@ -123,6 +128,53 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                 routingMode = _routingMode.value,
                 routing     = config.routing
             )
+        }
+    }
+
+    private fun startFreeModeTunnel() {
+        val ctx = getApplication<Application>()
+
+        val permIntent = VpnService.prepare(ctx)
+        if (permIntent != null) {
+            _vpnPermissionIntent.value = permIntent
+            return
+        }
+
+        viewModelScope.launch {
+            val configs = FreeModeManager.loadConfigs(ctx)
+            if (configs.isEmpty()) {
+                V2RayController.onStateChanged(VpnState.ERROR)
+                return@launch
+            }
+
+            V2RayController.onStateChanged(VpnState.FINDING_SERVER)
+
+            val startIdx = FreeModeManager.getStartIndex(ctx) % configs.size
+            val ordered  = configs.drop(startIdx) + configs.take(startIdx)
+
+            for (cfg in ordered.take(30)) {
+                val json = FreeModeManager.buildXrayJson(cfg)
+                ug.tera5g.v2ray.VpnPrefs.saveLastMode(ctx, _connectionMode.value, _routingMode.value)
+                V2RayController.connectFreeMode(ctx, json)
+
+                var waited = 0
+                while (waited < 9_000) {
+                    delay(500)
+                    waited += 500
+                    when (vpnState.value) {
+                        VpnState.CONNECTED -> {
+                            FreeModeManager.saveSuccessIndex(ctx, cfg.index)
+                            return@launch
+                        }
+                        VpnState.ERROR -> break
+                        else -> {}
+                    }
+                }
+                if (vpnState.value == VpnState.CONNECTED) return@launch
+
+                V2RayController.disconnect(ctx)
+                delay(400)
+            }
         }
     }
 

@@ -25,6 +25,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import ug.tera5g.MainViewModel
 import ug.tera5g.R
+import ug.tera5g.config.ConnectionMode
 import ug.tera5g.config.RoutingMode
 import ug.tera5g.ui.components.*
 import ug.tera5g.ui.theme.*
@@ -134,18 +135,19 @@ fun HomeScreen(
             ) {
                 Spacer(Modifier.height(20.dp))
 
+                val isFreeMode = connMode == ConnectionMode.FREE_BROWSE
                 ConnectButton(
                     state   = vpnState,
                     onClick = {
                         if (isActive) viewModel.toggleConnection()
-                        else if (!hasAccess) onPaywallRequested()
+                        else if (!hasAccess && !isFreeMode) onPaywallRequested()
                         else viewModel.toggleConnection()
                     }
                 )
 
                 Spacer(Modifier.height(10.dp))
 
-                AnimatedVisibility(visible = !hasAccess && !isActive) {
+                AnimatedVisibility(visible = !hasAccess && !isActive && !isFreeMode) {
                     TextButton(onClick = onPaywallRequested) {
                         Text(
                             "Get access from 500 UGX  →",

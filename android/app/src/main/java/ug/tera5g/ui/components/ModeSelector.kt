@@ -13,17 +13,22 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import ug.tera5g.config.ConnectionMode
 import ug.tera5g.config.RoutingMode
 import ug.tera5g.ui.theme.*
+
+private val FreeModeAmber = Color(0xFFFFC107)
 
 private fun ConnectionMode.icon(): ImageVector = when (this) {
     ConnectionMode.HIGH_SPEED   -> Icons.Outlined.Speed
     ConnectionMode.ULTRA_SECURE -> Icons.Outlined.VerifiedUser
     ConnectionMode.LIGHTNING    -> Icons.Outlined.Bolt
+    ConnectionMode.FREE_BROWSE  -> Icons.Outlined.WifiOff
     ConnectionMode.FALLBACK     -> Icons.Outlined.Tune
 }
 
@@ -33,7 +38,12 @@ fun ConnectionModeSelector(
     onSelect: (ConnectionMode) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val modes = listOf(ConnectionMode.HIGH_SPEED, ConnectionMode.ULTRA_SECURE, ConnectionMode.LIGHTNING)
+    val modes = listOf(
+        ConnectionMode.HIGH_SPEED,
+        ConnectionMode.ULTRA_SECURE,
+        ConnectionMode.LIGHTNING,
+        ConnectionMode.FREE_BROWSE
+    )
     Column(modifier, verticalArrangement = Arrangement.spacedBy(8.dp)) {
         modes.forEach { mode ->
             ConnectionModeCard(
@@ -51,20 +61,22 @@ private fun ConnectionModeCard(
     isSelected: Boolean,
     onClick: () -> Unit
 ) {
+    val accent = if (mode == ConnectionMode.FREE_BROWSE) FreeModeAmber else NeonGreen
+
     val bgColor by animateColorAsState(
-        targetValue   = if (isSelected) NeonGreen.copy(alpha = 0.08f) else GlassWhite,
+        targetValue   = if (isSelected) accent.copy(alpha = 0.08f) else GlassWhite,
         animationSpec = tween(300), label = "bg"
     )
     val borderColor by animateColorAsState(
-        targetValue   = if (isSelected) NeonGreen.copy(alpha = 0.38f) else GlassBorder,
+        targetValue   = if (isSelected) accent.copy(alpha = 0.38f) else GlassBorder,
         animationSpec = tween(300), label = "border"
     )
     val iconBg by animateColorAsState(
-        targetValue   = if (isSelected) NeonGreen.copy(alpha = 0.18f) else NeonGreen.copy(alpha = 0.06f),
+        targetValue   = if (isSelected) accent.copy(alpha = 0.18f) else accent.copy(alpha = 0.06f),
         animationSpec = tween(300), label = "iconBg"
     )
     val iconTint by animateColorAsState(
-        targetValue   = if (isSelected) NeonGreen else NeonGreen.copy(alpha = 0.40f),
+        targetValue   = if (isSelected) accent else accent.copy(alpha = 0.40f),
         animationSpec = tween(300), label = "iconTint"
     )
 
@@ -80,7 +92,6 @@ private fun ConnectionModeCard(
             verticalAlignment     = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(14.dp)
         ) {
-            // Icon in circle
             Box(
                 Modifier
                     .size(44.dp)
@@ -95,15 +106,33 @@ private fun ConnectionModeCard(
                 )
             }
 
-            // Text
             Column(Modifier.weight(1f)) {
-                Text(
-                    mode.label,
-                    style      = MaterialTheme.typography.bodyMedium,
-                    fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
-                    color      = if (isSelected) MaterialTheme.colorScheme.onSurface
-                                 else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f)
-                )
+                Row(
+                    verticalAlignment     = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text(
+                        mode.label,
+                        style      = MaterialTheme.typography.bodyMedium,
+                        fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
+                        color      = if (isSelected) MaterialTheme.colorScheme.onSurface
+                                     else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f)
+                    )
+                    if (mode == ConnectionMode.FREE_BROWSE) {
+                        Text(
+                            "FREE",
+                            style         = MaterialTheme.typography.labelSmall.copy(
+                                fontSize      = 9.sp,
+                                letterSpacing = 0.8.sp
+                            ),
+                            fontWeight    = FontWeight.Bold,
+                            color         = FreeModeAmber,
+                            modifier      = Modifier
+                                .background(FreeModeAmber.copy(alpha = 0.15f), RoundedCornerShape(4.dp))
+                                .padding(horizontal = 5.dp, vertical = 2.dp)
+                        )
+                    }
+                }
                 Text(
                     mode.description,
                     style = MaterialTheme.typography.bodySmall,
@@ -113,18 +142,17 @@ private fun ConnectionModeCard(
                 )
             }
 
-            // Checkmark / placeholder
             if (isSelected) {
                 Box(
                     Modifier
                         .size(24.dp)
-                        .background(NeonGreen.copy(alpha = 0.18f), CircleShape),
+                        .background(accent.copy(alpha = 0.18f), CircleShape),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         Icons.Outlined.Check,
                         contentDescription = null,
-                        tint     = NeonGreen,
+                        tint     = accent,
                         modifier = Modifier.size(14.dp)
                     )
                 }

@@ -76,6 +76,16 @@ object V2RayController {
         }
     }
 
+    fun connectFreeMode(context: Context, configJson: String) {
+        _state.value = VpnState.CONNECTING
+        _currentProfile.value = null
+        val intent = Intent(context, V2RayVpnService::class.java).apply {
+            action = V2RayVpnService.ACTION_START
+            putExtra(V2RayVpnService.EXTRA_CONFIG_JSON, configJson)
+        }
+        context.startForegroundService(intent)
+    }
+
     fun disconnect(context: Context) {
         portManager.stopMonitoring()
         _currentProfile.value = null

@@ -6,6 +6,7 @@ enum class ConnectionMode(val label: String, val description: String) {
     HIGH_SPEED("High Speed", "Optimised for streaming & browsing"),
     ULTRA_SECURE("Ultra Secure", "Maximum encryption & privacy"),
     LIGHTNING("Lightning", "Lowest latency, best for gaming"),
+    FREE_BROWSE("Free Browse", "Zero-data mode — no bundle needed"),
     FALLBACK("Auto", "Automatic fallback")
 }
 

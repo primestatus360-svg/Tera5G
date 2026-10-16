@@ -14,14 +14,15 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import ug.tera5g.R
 import ug.tera5g.ui.theme.*
 import ug.tera5g.v2ray.VpnState
@@ -37,7 +38,6 @@ fun ConnectButton(
 
     val infinite = rememberInfiniteTransition(label = "btn")
 
-    // ── Connecting: logo spins + dual radar rings ─────────────────────────────
     val rotation by infinite.animateFloat(
         0f, 360f,
         infiniteRepeatable(tween(1800, easing = LinearEasing), RepeatMode.Restart),
@@ -45,31 +45,27 @@ fun ConnectButton(
     )
     val pulse by infinite.animateFloat(
         0f, 1f,
-        infiniteRepeatable(tween(1300, easing = LinearEasing), RepeatMode.Restart),
+        infiniteRepeatable(tween(1400, easing = LinearEasing), RepeatMode.Restart),
         "pulse"
     )
-
-    // ── Connected: outer halo breathes, logo scale pulses softly ─────────────
     val breathe by infinite.animateFloat(
-        0.18f, 0.40f,
-        infiniteRepeatable(tween(1800, easing = EaseInOutSine), RepeatMode.Reverse),
+        0.12f, 0.32f,
+        infiniteRepeatable(tween(2400, easing = EaseInOutSine), RepeatMode.Reverse),
         "breathe"
     )
     val logoBreath by infinite.animateFloat(
-        1.00f, 1.07f,
-        infiniteRepeatable(tween(1800, easing = EaseInOutSine), RepeatMode.Reverse),
+        1.00f, 1.08f,
+        infiniteRepeatable(tween(2400, easing = EaseInOutSine), RepeatMode.Reverse),
         "logoBreath"
     )
 
-    // ── Animated colour transitions between states ────────────────────────────
     val innerBg by animateColorAsState(
         targetValue   = when {
-            isConnected  -> NeonGreen.copy(alpha = 0.22f)
-            isConnecting -> ConnectingBlue.copy(alpha = 0.12f)
+            isConnected  -> NeonGreen.copy(alpha = 0.20f)
+            isConnecting -> ConnectingBlue.copy(alpha = 0.10f)
             else         -> DarkSurfaceVariant
         },
-        animationSpec = tween(500),
-        label         = "innerBg"
+        animationSpec = tween(700), label = "innerBg"
     )
     val borderCol by animateColorAsState(
         targetValue   = when {
@@ -77,22 +73,18 @@ fun ConnectButton(
             isConnecting -> ConnectingBlue.copy(alpha = 0.85f)
             else         -> DarkOutline
         },
-        animationSpec = tween(500),
-        label         = "borderCol"
+        animationSpec = tween(700), label = "borderCol"
     )
     val borderW by animateDpAsState(
         targetValue   = when {
-            isConnected  -> 3.dp
+            isConnected  -> 2.5.dp
             isConnecting -> 1.5.dp
             else         -> 1.dp
         },
-        animationSpec = tween(500),
-        label         = "borderW"
+        animationSpec = tween(700), label = "borderW"
     )
-
-    // ── Overall button scale spring ───────────────────────────────────────────
     val buttonScale by animateFloatAsState(
-        targetValue   = if (isConnected) 1.06f else 1f,
+        targetValue   = if (isConnected) 1.05f else 1f,
         animationSpec = spring(Spring.DampingRatioMediumBouncy, Spring.StiffnessMediumLow),
         label         = "btnScale"
     )
@@ -109,47 +101,55 @@ fun ConnectButton(
     ) {
         Box(
             contentAlignment = Alignment.Center,
-            modifier = Modifier.size(224.dp).scale(buttonScale)
+            modifier = Modifier.size(230.dp).scale(buttonScale)
         ) {
-
-            // ── Connected: breathing green halo ───────────────────────────────
+            // ── Connected: 4 concentric breathing halos ────────────────────────
             if (isConnected) {
-                Box(Modifier.size(224.dp).background(NeonGreen.copy(breathe * 0.7f), CircleShape))
-                Box(Modifier.size(200.dp).background(NeonGreen.copy(breathe * 0.5f), CircleShape))
+                Box(Modifier.size(230.dp).background(NeonGreen.copy(breathe * 0.40f), CircleShape))
+                Box(Modifier.size(212.dp).background(NeonGreen.copy(breathe * 0.55f), CircleShape))
+                Box(Modifier.size(198.dp).background(NeonGreen.copy(breathe * 0.70f), CircleShape))
+                Box(Modifier.size(184.dp).background(NeonGreen.copy(breathe * 0.50f), CircleShape))
             }
 
-            // ── Connecting: dual radar rings ──────────────────────────────────
+            // ── Connecting: dual expanding radar sweeps ────────────────────────
             if (isConnecting) {
                 listOf(pulse, (pulse + 0.5f) % 1f).forEach { p ->
                     Box(
                         Modifier
-                            .size(200.dp)
-                            .scale(0.55f + p * 0.95f)
-                            .alpha((1f - p) * 0.55f)
-                            .background(ConnectingBlue.copy(0.28f), CircleShape)
+                            .size(214.dp)
+                            .scale(0.48f + p * 1.05f)
+                            .alpha((1f - p) * 0.48f)
+                            .background(ConnectingBlue.copy(0.22f), CircleShape)
                     )
                 }
             }
 
-            // ── Outer ring with shadow ─────────────────────────────────────────
+            // ── Outer dark ring with colour-tinted shadow ──────────────────────
             Box(
                 contentAlignment = Alignment.Center,
                 modifier = Modifier
-                    .size(186.dp)
+                    .size(192.dp)
                     .shadow(
-                        elevation    = if (isConnected) 28.dp else 8.dp,
+                        elevation    = if (isConnected) 44.dp else 10.dp,
                         shape        = CircleShape,
-                        ambientColor = borderCol.copy(if (isConnected) 0.45f else 0.15f),
-                        spotColor    = borderCol.copy(if (isConnected) 0.45f else 0.15f)
+                        ambientColor = borderCol.copy(if (isConnected) 0.60f else 0.12f),
+                        spotColor    = borderCol.copy(if (isConnected) 0.60f else 0.12f)
                     )
                     .background(DarkSurface, CircleShape)
             ) {
-                // ── Inner clickable circle ─────────────────────────────────────
+                // ── Inner circle: radial gradient fill + border ────────────────
+                val innerGradient = if (isConnected) {
+                    Brush.radialGradient(listOf(NeonGreen.copy(0.30f), innerBg))
+                } else {
+                    Brush.radialGradient(listOf(innerBg, innerBg))
+                }
+
                 Box(
                     contentAlignment = Alignment.Center,
                     modifier = Modifier
-                        .size(156.dp)
-                        .background(innerBg, CircleShape)
+                        .size(162.dp)
+                        .clip(CircleShape)
+                        .background(brush = innerGradient)
                         .border(borderW, borderCol, CircleShape)
                         .clickable(
                             interactionSource = remember { MutableInteractionSource() },
@@ -157,27 +157,23 @@ fun ConnectButton(
                             onClick           = onClick
                         )
                 ) {
-                    // ── App logo — spins when connecting, breathes when connected
                     Image(
                         painter            = painterResource(R.mipmap.ic_launcher_foreground),
                         contentDescription = "Connect / Disconnect",
                         modifier           = Modifier
-                            .size(72.dp)
+                            .size(76.dp)
                             .graphicsLayer {
                                 rotationZ = if (isConnecting) rotation else 0f
-                                val s = when {
-                                    isConnected  -> logoBreath
-                                    else         -> 1f
-                                }
+                                val s = if (isConnected) logoBreath else 1f
                                 scaleX = s; scaleY = s
                             }
-                            .alpha(if (!isConnected && !isConnecting) 0.45f else 1f)
+                            .alpha(if (!isConnected && !isConnecting) 0.50f else 1f)
                     )
                 }
             }
         }
 
-        Spacer(Modifier.height(22.dp))
+        Spacer(Modifier.height(26.dp))
 
         Text(
             text = when {
@@ -185,9 +181,10 @@ fun ConnectButton(
                 isConnecting -> if (state == VpnState.FINDING_SERVER) "Finding Server…" else "Connecting…"
                 else         -> "Tap to Connect"
             },
-            style      = MaterialTheme.typography.displaySmall,
-            fontWeight = FontWeight.SemiBold,
-            color      = labelColor
+            style         = MaterialTheme.typography.displaySmall,
+            fontWeight    = FontWeight.SemiBold,
+            color         = labelColor,
+            letterSpacing = if (!isConnected && !isConnecting) 0.8.sp else 0.sp
         )
     }
 }

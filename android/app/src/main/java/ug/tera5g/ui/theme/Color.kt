@@ -52,6 +52,10 @@ val AirtelRed           = Color(0xFFE40000)
 val White               = Color(0xFFFFFFFF)
 val Black               = Color(0xFF000000)
 
+// Premium glassmorphism
+val GlassWhite          = Color(0x0DFFFFFF)   // 5% white — glass surface fill
+val GlassBorder         = Color(0x1AFFFFFF)   // 10% white — glass border
+
 // Legacy aliases kept for existing references
 val SystemBlue          = ConnectingBlue
 val SystemGreen         = NeonGreen

@@ -187,53 +187,81 @@ private fun PlanChooser(selected: Plan?, onSelect: (Plan) -> Unit) {
 
 @Composable
 private fun PlanCard(plan: Plan, isSelected: Boolean, onClick: () -> Unit) {
-    val borderColor = if (isSelected) MaterialTheme.colorScheme.primary
-                      else MaterialTheme.colorScheme.outlineVariant
-    Surface(
-        onClick   = onClick,
-        shape     = RoundedCornerShape(18.dp),
-        color     = if (isSelected) MaterialTheme.colorScheme.primary.copy(0.08f)
-                    else MaterialTheme.colorScheme.surface,
-        border    = BorderStroke(if (isSelected) 2.dp else 1.dp, borderColor),
-        modifier  = Modifier.fillMaxWidth()
+    val borderColor = if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.60f)
+                      else ug.tera5g.ui.theme.GlassBorder
+    val bgColor     = if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.09f)
+                      else ug.tera5g.ui.theme.GlassWhite
+
+    Box(
+        Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(20.dp))
+            .background(bgColor)
+            .border(if (isSelected) 1.5.dp else 1.dp, borderColor, RoundedCornerShape(20.dp))
+            .clickable(
+                interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
+                indication        = null,
+                onClick           = onClick
+            )
     ) {
+        // Top accent glow when selected
+        if (isSelected) {
+            Box(
+                Modifier
+                    .fillMaxWidth()
+                    .height(60.dp)
+                    .background(
+                        androidx.compose.ui.graphics.Brush.verticalGradient(
+                            listOf(
+                                MaterialTheme.colorScheme.primary.copy(alpha = 0.10f),
+                                androidx.compose.ui.graphics.Color.Transparent
+                            )
+                        )
+                    )
+            )
+        }
         Row(
             Modifier.padding(20.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment     = Alignment.CenterVertically
         ) {
             Column {
                 Text(
                     plan.label,
-                    style = MaterialTheme.typography.headlineMedium,
+                    style      = MaterialTheme.typography.headlineMedium,
                     fontWeight = FontWeight.Bold,
-                    color = if (isSelected) MaterialTheme.colorScheme.primary
-                            else MaterialTheme.colorScheme.onSurface
+                    color      = if (isSelected) MaterialTheme.colorScheme.primary
+                                 else MaterialTheme.colorScheme.onSurface
                 )
                 Text(
                     plan.description,
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
                 )
             }
             Column(horizontalAlignment = Alignment.End) {
                 Text(
                     "${plan.price} UGX",
-                    style = MaterialTheme.typography.displaySmall,
+                    style      = MaterialTheme.typography.displaySmall,
                     fontWeight = FontWeight.Bold,
-                    color = if (isSelected) MaterialTheme.colorScheme.primary
-                            else MaterialTheme.colorScheme.onSurface
+                    color      = if (isSelected) MaterialTheme.colorScheme.primary
+                                 else MaterialTheme.colorScheme.onSurface
                 )
                 if (plan.id == "24h") {
-                    Surface(
-                        shape = RoundedCornerShape(6.dp),
-                        color = MaterialTheme.colorScheme.secondary.copy(0.15f)
+                    Spacer(Modifier.height(4.dp))
+                    Box(
+                        Modifier
+                            .background(
+                                MaterialTheme.colorScheme.secondary.copy(0.18f),
+                                RoundedCornerShape(6.dp)
+                            )
+                            .padding(horizontal = 8.dp, vertical = 3.dp)
                     ) {
                         Text(
                             "Best Value",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.secondary,
-                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                            style      = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.SemiBold,
+                            color      = MaterialTheme.colorScheme.secondary
                         )
                     }
                 }

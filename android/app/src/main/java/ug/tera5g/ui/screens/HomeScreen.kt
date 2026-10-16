@@ -3,6 +3,7 @@ package ug.tera5g.ui.screens
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.*
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -10,17 +11,18 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Shield
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import ug.tera5g.MainViewModel
 import ug.tera5g.R
 import ug.tera5g.config.RoutingMode
@@ -48,15 +50,10 @@ fun HomeScreen(
         ActivityResultContracts.StartActivityForResult()
     ) { if (it.resultCode == android.app.Activity.RESULT_OK) viewModel.onVpnPermissionGranted() }
 
-    LaunchedEffect(permIntent) {
-        permIntent?.let { permLauncher.launch(it) }
-    }
+    LaunchedEffect(permIntent) { permIntent?.let { permLauncher.launch(it) } }
 
     LaunchedEffect(forcePaywall) {
-        if (forcePaywall) {
-            viewModel.resetForcePaywall()
-            onPaywallRequested()
-        }
+        if (forcePaywall) { viewModel.resetForcePaywall(); onPaywallRequested() }
     }
 
     val isConnected = vpnState == VpnState.CONNECTED
@@ -65,27 +62,45 @@ fun HomeScreen(
                       vpnState == VpnState.FINDING_SERVER
     val hasAccess   = token?.isActive == true
 
+    val glowColor by animateColorAsState(
+        targetValue   = when {
+            isConnected -> NeonGreen.copy(alpha = 0.13f)
+            isActive    -> ConnectingBlue.copy(alpha = 0.08f)
+            else        -> NeonGreen.copy(alpha = 0.04f)
+        },
+        animationSpec = tween(900), label = "glow"
+    )
+
     Box(
         Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
     ) {
+        // ── Ambient radial glow behind connect button ─────────────────────────
+        Box(
+            Modifier
+                .size(560.dp)
+                .align(Alignment.TopCenter)
+                .offset(y = 70.dp)
+                .background(Brush.radialGradient(listOf(glowColor, Color.Transparent)))
+        )
+
         Column(
             Modifier
                 .fillMaxSize()
                 .statusBarsPadding()
                 .navigationBarsPadding()
         ) {
-            // ── Header ────────────────────────────────────────────────────
+            // ── Header ────────────────────────────────────────────────────────
             Row(
                 Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 24.dp, vertical = 16.dp),
+                    .padding(horizontal = 24.dp, vertical = 18.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Surface(
                     shape    = CircleShape,
-                    color    = NeonGreen.copy(alpha = 0.15f),
+                    color    = NeonGreen.copy(alpha = 0.12f),
                     modifier = Modifier.size(38.dp)
                 ) {
                     Box(contentAlignment = Alignment.Center) {
@@ -107,7 +122,7 @@ fun HomeScreen(
                 SessionTimer(token = token)
             }
 
-            // ── Scrollable body ───────────────────────────────────────────
+            // ── Scrollable body ───────────────────────────────────────────────
             Column(
                 Modifier
                     .weight(1f)
@@ -115,7 +130,7 @@ fun HomeScreen(
                     .padding(horizontal = 24.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Spacer(Modifier.height(16.dp))
+                Spacer(Modifier.height(20.dp))
 
                 ConnectButton(
                     state   = vpnState,
@@ -130,62 +145,76 @@ fun HomeScreen(
 
                 AnimatedVisibility(visible = !hasAccess && !isActive) {
                     TextButton(onClick = onPaywallRequested) {
-                        Icon(Icons.Outlined.Info, null, Modifier.size(15.dp))
-                        Spacer(Modifier.width(4.dp))
                         Text(
-                            "Get access from 500 UGX",
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            "Get access from 500 UGX  →",
+                            style         = MaterialTheme.typography.labelMedium,
+                            color         = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.65f),
+                            letterSpacing = 0.3.sp
                         )
                     }
                 }
 
                 Spacer(Modifier.height(28.dp))
 
+                // ── Connected card ────────────────────────────────────────────
                 AnimatedVisibility(
                     visible = isConnected,
                     enter   = fadeIn() + slideInVertically { it / 3 },
                     exit    = fadeOut() + slideOutVertically { it / 3 }
                 ) {
                     Column {
-                        ConnectedCard(
+                        PremiumConnectedCard(
                             networkName   = networkName,
                             signalLevel   = signalLevel,
                             downloadSpeed = downloadSpeed,
                             uploadSpeed   = uploadSpeed
                         )
-                        Spacer(Modifier.height(24.dp))
+                        Spacer(Modifier.height(28.dp))
                     }
                 }
 
-                // ── Mode section ──────────────────────────────────────────
-                Column(Modifier.fillMaxWidth()) {
-                    Text(
-                        "Traffic Mode",
-                        style = MaterialTheme.typography.headlineSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Spacer(Modifier.height(10.dp))
-                    RoutingModeChips(
-                        selected = routingMode,
-                        onSelect = viewModel::setRoutingMode,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    Spacer(Modifier.height(6.dp))
-                    Text(
-                        when (routingMode) {
-                            RoutingMode.SMART       -> "Smart routing bypasses local services directly."
-                            RoutingMode.FULL_TUNNEL -> "All traffic is routed through the secure tunnel."
-                            RoutingMode.FAST        -> "Local network stays direct for faster browsing."
-                        },
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
+                // ── Routing ───────────────────────────────────────────────────
+                SectionLabel("Routing")
+                Spacer(Modifier.height(10.dp))
+                RoutingModeChips(
+                    selected = routingMode,
+                    onSelect = viewModel::setRoutingMode,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Spacer(Modifier.height(6.dp))
+                Text(
+                    when (routingMode) {
+                        RoutingMode.SMART       -> "Local services bypass the tunnel automatically."
+                        RoutingMode.FULL_TUNNEL -> "All traffic routed through the encrypted tunnel."
+                        RoutingMode.FAST        -> "Direct local network, tunnel for blocked sites."
+                    },
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.55f)
+                )
 
                 Spacer(Modifier.height(28.dp))
-                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-                Spacer(Modifier.height(20.dp))
+
+                // Glowing divider
+                Box(
+                    Modifier
+                        .fillMaxWidth()
+                        .height(1.dp)
+                        .background(
+                            Brush.horizontalGradient(
+                                listOf(
+                                    Color.Transparent,
+                                    NeonGreen.copy(alpha = 0.18f),
+                                    Color.Transparent
+                                )
+                            )
+                        )
+                )
+
+                Spacer(Modifier.height(24.dp))
+
+                // ── Protocol ──────────────────────────────────────────────────
+                SectionLabel("Protocol")
+                Spacer(Modifier.height(12.dp))
 
                 ConnectionModeSelector(
                     selected = connMode,
@@ -193,28 +222,52 @@ fun HomeScreen(
                     modifier = Modifier.fillMaxWidth()
                 )
 
-                Spacer(Modifier.height(40.dp))
+                Spacer(Modifier.height(52.dp))
             }
         }
     }
 }
 
 @Composable
-private fun ConnectedCard(
+private fun SectionLabel(text: String) {
+    Text(
+        text          = text.uppercase(),
+        style         = MaterialTheme.typography.labelSmall.copy(letterSpacing = 1.8.sp),
+        fontWeight    = FontWeight.SemiBold,
+        color         = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.50f),
+        modifier      = Modifier.fillMaxWidth()
+    )
+}
+
+@Composable
+private fun PremiumConnectedCard(
     networkName: String?,
     signalLevel: Int,
     downloadSpeed: Long,
     uploadSpeed: Long
 ) {
-    Surface(
-        shape    = RoundedCornerShape(20.dp),
-        color    = NeonGreen.copy(alpha = 0.08f),
-        border   = BorderStroke(1.dp, NeonGreen.copy(alpha = 0.22f)),
-        modifier = Modifier.fillMaxWidth()
+    Box(
+        Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(24.dp))
+            .background(GlassWhite)
+            .border(1.dp, GlassBorder, RoundedCornerShape(24.dp))
     ) {
-        Column(Modifier.padding(horizontal = 18.dp, vertical = 16.dp)) {
+        // Subtle top green glow
+        Box(
+            Modifier
+                .fillMaxWidth()
+                .height(90.dp)
+                .background(
+                    Brush.verticalGradient(
+                        listOf(NeonGreen.copy(alpha = 0.06f), Color.Transparent)
+                    )
+                )
+        )
 
-            // Top: shield + status text + active badge
+        Column(Modifier.padding(horizontal = 20.dp, vertical = 18.dp)) {
+
+            // Status row
             Row(
                 Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -222,16 +275,15 @@ private fun ConnectedCard(
             ) {
                 Row(
                     verticalAlignment     = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    Surface(
-                        shape    = CircleShape,
-                        color    = NeonGreen.copy(alpha = 0.18f),
-                        modifier = Modifier.size(36.dp)
+                    Box(
+                        Modifier
+                            .size(38.dp)
+                            .background(NeonGreen.copy(alpha = 0.15f), CircleShape),
+                        contentAlignment = Alignment.Center
                     ) {
-                        Box(contentAlignment = Alignment.Center) {
-                            Icon(Icons.Outlined.Shield, null, tint = NeonGreen, modifier = Modifier.size(18.dp))
-                        }
+                        Icon(Icons.Outlined.Shield, null, tint = NeonGreen, modifier = Modifier.size(18.dp))
                     }
                     Column {
                         Text(
@@ -241,30 +293,34 @@ private fun ConnectedCard(
                             color      = MaterialTheme.colorScheme.onSurface
                         )
                         Text(
-                            "Encrypted & private",
+                            "End-to-end encrypted",
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.65f)
                         )
                     }
                 }
-                Surface(
-                    shape = RoundedCornerShape(8.dp),
-                    color = NeonGreen.copy(alpha = 0.15f)
+                // Live dot + "Active"
+                Row(
+                    Modifier
+                        .background(NeonGreen.copy(alpha = 0.12f), RoundedCornerShape(8.dp))
+                        .padding(horizontal = 10.dp, vertical = 5.dp),
+                    verticalAlignment     = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(5.dp)
                 ) {
+                    Box(Modifier.size(6.dp).background(NeonGreen, CircleShape))
                     Text(
-                        "● Active",
-                        style    = MaterialTheme.typography.labelSmall,
-                        color    = NeonGreen,
-                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp)
+                        "Active",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = NeonGreen
                     )
                 }
             }
 
-            Spacer(Modifier.height(12.dp))
-            HorizontalDivider(color = NeonGreen.copy(alpha = 0.10f))
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(14.dp))
+            Box(Modifier.fillMaxWidth().height(1.dp).background(GlassBorder))
+            Spacer(Modifier.height(14.dp))
 
-            // Network name + signal bars
+            // Network name + signal
             Row(
                 Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -273,20 +329,20 @@ private fun ConnectedCard(
                 Text(
                     networkName ?: "—",
                     style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.75f)
                 )
                 SignalBars(level = signalLevel)
             }
 
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(12.dp))
 
-            // Download + upload speed
+            // Speed row
             Row(
                 Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(24.dp)
+                horizontalArrangement = Arrangement.spacedBy(32.dp)
             ) {
-                SpeedChip(arrow = "↓", speed = downloadSpeed, color = NeonGreen)
-                SpeedChip(arrow = "↑", speed = uploadSpeed,   color = ConnectingBlue)
+                SpeedChip(arrow = "↓", label = "Download", speed = downloadSpeed, color = NeonGreen)
+                SpeedChip(arrow = "↑", label = "Upload",   speed = uploadSpeed,   color = ConnectingBlue)
             }
         }
     }
@@ -304,31 +360,36 @@ private fun SignalBars(level: Int) {
                     .width(4.dp)
                     .height(height)
                     .clip(RoundedCornerShape(1.dp))
-                    .background(
-                        if (index < level) NeonGreen else NeonGreen.copy(alpha = 0.18f)
-                    )
+                    .background(if (index < level) NeonGreen else NeonGreen.copy(alpha = 0.18f))
             )
         }
     }
 }
 
 @Composable
-private fun SpeedChip(arrow: String, speed: Long, color: Color) {
-    Row(
-        verticalAlignment     = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(5.dp)
-    ) {
+private fun SpeedChip(arrow: String, label: String, speed: Long, color: Color) {
+    Column {
+        Row(
+            verticalAlignment     = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            Text(
+                arrow,
+                style      = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.ExtraBold,
+                color      = color
+            )
+            Text(
+                formatSpeed(speed),
+                style      = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.SemiBold,
+                color      = MaterialTheme.colorScheme.onSurface
+            )
+        }
         Text(
-            arrow,
-            style      = MaterialTheme.typography.labelMedium,
-            fontWeight = FontWeight.ExtraBold,
-            color      = color
-        )
-        Text(
-            formatSpeed(speed),
-            style      = MaterialTheme.typography.labelMedium,
-            fontWeight = FontWeight.Medium,
-            color      = MaterialTheme.colorScheme.onSurface
+            label,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.45f)
         )
     }
 }

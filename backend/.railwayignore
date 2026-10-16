@@ -1,2 +1,4 @@
 # APK excluded from CLI uploads (too large) — deploy via GitHub auto-deploy instead
 public/downloads/*.apk
+# Prisma schema is not used — exclude to prevent railpack from attempting prisma generate
+prisma/

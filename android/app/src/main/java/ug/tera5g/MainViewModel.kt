@@ -3,6 +3,7 @@ package ug.tera5g
 import android.app.Application
 import android.content.Intent
 import android.net.ConnectivityManager
+import android.net.Network
 import android.net.NetworkCapabilities
 import android.net.TrafficStats
 import android.net.VpnService
@@ -141,6 +142,14 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         }
 
         viewModelScope.launch(Dispatchers.IO) {
+            // Bail out early if there is no carrier network at all.
+            val cm = ctx.getSystemService(ConnectivityManager::class.java)
+            val activeNet: Network? = cm.activeNetwork
+            if (activeNet == null) {
+                V2RayController.onStateChanged(VpnState.ERROR)
+                return@launch
+            }
+
             val configs = FreeModeManager.loadConfigs(ctx)
             if (configs.isEmpty()) {
                 V2RayController.onStateChanged(VpnState.ERROR)
@@ -152,15 +161,16 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             val startIdx = FreeModeManager.getStartIndex(ctx) % configs.size
             val ordered  = configs.drop(startIdx) + configs.take(startIdx)
 
+            // Try up to 30 configs; 5 s timeout per attempt (AM Tunnel uses 3 s).
             for (cfg in ordered.take(30)) {
                 val json = FreeModeManager.buildXrayJson(cfg)
                 ug.tera5g.v2ray.VpnPrefs.saveLastMode(ctx, _connectionMode.value, _routingMode.value)
                 V2RayController.connectFreeMode(ctx, json)
 
                 var waited = 0
-                while (waited < 9_000) {
-                    delay(500)
-                    waited += 500
+                while (waited < 5_000) {
+                    delay(250)
+                    waited += 250
                     when (vpnState.value) {
                         VpnState.CONNECTED -> {
                             FreeModeManager.saveSuccessIndex(ctx, cfg.index)
@@ -173,7 +183,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                 if (vpnState.value == VpnState.CONNECTED) return@launch
 
                 V2RayController.disconnect(ctx)
-                delay(400)
+                delay(200)
             }
         }
     }

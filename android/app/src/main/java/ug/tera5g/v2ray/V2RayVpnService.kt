@@ -5,6 +5,8 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.net.ConnectivityManager
+import android.net.LinkProperties
 import android.net.TrafficStats
 import android.net.VpnService
 import android.os.*
@@ -16,6 +18,7 @@ import libv2ray.CoreController
 import libv2ray.Libv2ray
 import ug.tera5g.R
 import ug.tera5g.MainActivity
+import java.net.Inet4Address
 import java.util.concurrent.TimeUnit
 
 class V2RayVpnService : VpnService(), CoreCallbackHandler {
@@ -28,7 +31,8 @@ class V2RayVpnService : VpnService(), CoreCallbackHandler {
         const val ACTION_START = "ug.tera5g.START"
         const val ACTION_STOP  = "ug.tera5g.STOP"
 
-        const val EXTRA_CONFIG_JSON = "config_json"
+        const val EXTRA_CONFIG_JSON    = "config_json"
+        const val EXTRA_IS_FREE_BROWSE = "is_free_browse"
 
         var isRunning = false
             private set
@@ -62,9 +66,10 @@ class V2RayVpnService : VpnService(), CoreCallbackHandler {
                 val configJson = intent.getStringExtra(EXTRA_CONFIG_JSON)
                     ?: VpnPrefs.getConfigJson(this)
                     ?: return START_NOT_STICKY
+                val isFreeBrowse = intent.getBooleanExtra(EXTRA_IS_FREE_BROWSE, false)
                 VpnPrefs.saveConfigJson(this, configJson)
                 startForegroundNotification("Connecting…", 0L, 0L)
-                scope.launch { startTunnel(configJson) }
+                scope.launch { startTunnel(configJson, isFreeBrowse) }
                 return START_NOT_STICKY
             }
             ACTION_STOP -> {
@@ -91,7 +96,7 @@ class V2RayVpnService : VpnService(), CoreCallbackHandler {
 
     // ── Tunnel start/stop ─────────────────────────────────────────────────
 
-    private fun startTunnel(configJson: String) {
+    private fun startTunnel(configJson: String, isFreeBrowse: Boolean = false) {
         try {
             V2RayAssets.copyToFilesDir(this)
             Libv2ray.initCoreEnv(filesDir.absolutePath, "")
@@ -104,12 +109,28 @@ class V2RayVpnService : VpnService(), CoreCallbackHandler {
                 .setSession("Tera5G")
                 .setMtu(1500)
                 .addAddress("10.0.0.2", 24)
-                .addDnsServer("1.1.1.1")
-                .addDnsServer("8.8.8.8")
-                .addRoute("0.0.0.0", 0)
-                .addRoute("::", 0)
                 .allowFamily(android.system.OsConstants.AF_INET)
                 .allowFamily(android.system.OsConstants.AF_INET6)
+
+            // Use carrier DNS when available (important for zero-rated networks);
+            // fall back to well-known resolvers.
+            val dnsServers = if (isFreeBrowse) getCarrierDns() else listOf("1.1.1.1", "8.8.8.8")
+            dnsServers.forEach { builder.addDnsServer(it) }
+
+            if (isFreeBrowse) {
+                // Mirror AM Tunnel's routing: route everything EXCEPT the carrier
+                // 10.0.0.0/8 range through the TUN.  This keeps the WireGuard server
+                // at 10.7.x.x reachable directly even if socket-protect is delayed.
+                builder.addRoute("0.0.0.0", 1)   // 0.0.0.0/1  covers 0–127
+                builder.addRoute("128.0.0.0", 1) // 128.0.0.0/1 covers 128–255
+                // Skip 10.0.0.0/8 — deliberately not added so carrier IPs route natively
+                // Re-add the non-10 private ranges that should still go through the tunnel
+                builder.addRoute("172.16.0.0", 12)
+                builder.addRoute("192.168.0.0", 16)
+            } else {
+                builder.addRoute("0.0.0.0", 0)
+                builder.addRoute("::", 0)
+            }
 
             loadBypassApps(builder)
 
@@ -189,6 +210,23 @@ misc:
         tun2socksProcess = ProcessBuilder(tunPath, cfgFile.absolutePath)
             .redirectErrorStream(true)
             .start() as java.lang.Process
+    }
+
+    private fun getCarrierDns(): List<String> {
+        return try {
+            val cm = getSystemService(ConnectivityManager::class.java)
+            val lp: LinkProperties? = cm.getLinkProperties(cm.activeNetwork)
+            val servers = lp?.dnsServers
+                ?.filterIsInstance<Inet4Address>()
+                ?.map { it.hostAddress }
+                ?.filter { !it.isNullOrEmpty() }
+                ?.filterNotNull()
+                ?.take(2)
+                ?.ifEmpty { null }
+            servers ?: listOf("8.8.8.8", "1.1.0.0")
+        } catch (_: Exception) {
+            listOf("8.8.8.8", "1.1.0.0")
+        }
     }
 
     private fun loadBypassApps(builder: Builder) {

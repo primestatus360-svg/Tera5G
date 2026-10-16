@@ -82,9 +82,7 @@ object FreeModeManager {
                             "allowedIPs" to listOf("0.0.0.0/0", "::/0"),
                             "keepAlive"  to 25
                         )),
-                        "mtu"            to 1420,
-                        "noKernelTun"    to true,
-                        "domainStrategy" to "ForceIPv4"
+                        "mtu"            to 1420
                     )
                 ),
                 mapOf(

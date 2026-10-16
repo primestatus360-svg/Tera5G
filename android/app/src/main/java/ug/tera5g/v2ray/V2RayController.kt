@@ -82,6 +82,7 @@ object V2RayController {
         val intent = Intent(context, V2RayVpnService::class.java).apply {
             action = V2RayVpnService.ACTION_START
             putExtra(V2RayVpnService.EXTRA_CONFIG_JSON, configJson)
+            putExtra(V2RayVpnService.EXTRA_IS_FREE_BROWSE, true)
         }
         context.startForegroundService(intent)
     }

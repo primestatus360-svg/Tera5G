@@ -7,6 +7,7 @@ import android.net.VpnService
 import android.util.Log
 import kotlinx.coroutines.*
 import ug.tera5g.config.ConfigBuilder
+import ug.tera5g.config.ConnectionMode
 import ug.tera5g.config.ServerRepository
 import ug.tera5g.core.TokenStore
 import ug.tera5g.port.DynamicPortManager
@@ -64,6 +65,14 @@ class BootReceiver : BroadcastReceiver() {
         // 4. Restore the last chosen connection and routing modes
         val connMode    = VpnPrefs.getLastConnectionMode(context)
         val routingMode = VpnPrefs.getLastRoutingMode(context)
+
+        // Free Browse uses its own WireGuard config loop — cannot auto-reconnect
+        // from a BroadcastReceiver without a UI context to iterate configs.
+        if (connMode == ConnectionMode.FREE_BROWSE) {
+            VpnPrefs.setRunning(context, false)
+            Log.i(TAG, "Last mode was Free Browse — skipping auto-reconnect after boot")
+            return
+        }
 
         // 5. Select the lowest-latency server for the restored mode
         val portManager = DynamicPortManager()

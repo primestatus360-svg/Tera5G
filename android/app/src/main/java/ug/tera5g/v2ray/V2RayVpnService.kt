@@ -2,6 +2,7 @@ package ug.tera5g.v2ray
 
 import android.app.*
 import android.content.Intent
+import android.net.TrafficStats
 import android.net.VpnService
 import android.os.*
 import android.util.Log
@@ -18,7 +19,7 @@ class V2RayVpnService : VpnService(), CoreCallbackHandler {
     companion object {
         private const val TAG = "Tera5G_VPN"
         const val CHANNEL_ID = "tera5g_vpn_status"
-        const val NOTIF_ID = 1001
+        const val NOTIF_ID   = 1001
 
         const val ACTION_START = "ug.tera5g.START"
         const val ACTION_STOP  = "ug.tera5g.STOP"
@@ -39,16 +40,33 @@ class V2RayVpnService : VpnService(), CoreCallbackHandler {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
             ACTION_START -> {
-                val configJson = intent.getStringExtra(EXTRA_CONFIG_JSON) ?: return START_NOT_STICKY
-                startForegroundNotification()
+                val configJson = intent.getStringExtra(EXTRA_CONFIG_JSON)
+                    ?: VpnPrefs.getConfigJson(this)
+                    ?: return START_NOT_STICKY
+                VpnPrefs.saveConfigJson(this, configJson)
+                startForegroundNotification("Connecting…", 0L, 0L)
                 scope.launch { startTunnel(configJson) }
+                return START_REDELIVER_INTENT         // persist across system restarts
             }
-            ACTION_STOP -> stopTunnel()
+            ACTION_STOP -> {
+                VpnPrefs.clearConfigJson(this)
+                stopTunnel()
+            }
+            null -> {
+                // System restarted the service — recover from saved config
+                val configJson = VpnPrefs.getConfigJson(this)
+                if (configJson != null && VpnPrefs.wasRunning(this)) {
+                    startForegroundNotification("Reconnecting…", 0L, 0L)
+                    scope.launch { startTunnel(configJson) }
+                    return START_REDELIVER_INTENT
+                }
+            }
         }
         return START_NOT_STICKY
     }
 
     override fun onRevoke() {
+        VpnPrefs.clearConfigJson(this)
         stopTunnel()
         super.onRevoke()
     }
@@ -63,18 +81,13 @@ class V2RayVpnService : VpnService(), CoreCallbackHandler {
 
     private fun startTunnel(configJson: String) {
         try {
-            // 1. Copy geo assets to filesDir so V2Ray can load them
             V2RayAssets.copyToFilesDir(this)
-
-            // 2. Init core environment with the assets path
             Libv2ray.initCoreEnv(filesDir.absolutePath, "")
 
-            // 3. Start V2Ray/Xray core via libv2ray
             val ctrl = Libv2ray.newCoreController(this)
             ctrl.startLoop(configJson, 0)
             coreController = ctrl
 
-            // 4. Establish Android VPN tunnel
             val builder = Builder()
                 .setSession("Tera5G")
                 .setMtu(1500)
@@ -86,18 +99,17 @@ class V2RayVpnService : VpnService(), CoreCallbackHandler {
                 .allowFamily(android.system.OsConstants.AF_INET)
                 .allowFamily(android.system.OsConstants.AF_INET6)
 
-            // Load per-app bypass list
             loadBypassApps(builder)
 
             pfd = builder.establish() ?: throw Exception("VPN tunnel establishment failed")
-
-            // 5. Start tun2socks to bridge tun → SOCKS5:10808
             startTun2socks(pfd!!.fd)
 
             isRunning = true
             VpnPrefs.setRunning(this@V2RayVpnService, true)
             V2RayController.onStateChanged(VpnState.CONNECTED)
             Log.i(TAG, "Tunnel started successfully")
+
+            startNotifStatsLoop()
 
         } catch (e: Exception) {
             Log.e(TAG, "Failed to start tunnel", e)
@@ -107,16 +119,13 @@ class V2RayVpnService : VpnService(), CoreCallbackHandler {
     }
 
     private fun stopTunnel() {
-        scope.coroutineContext.cancelChildren()  // Stop in-flight startTunnel() if still running
+        scope.coroutineContext.cancelChildren()
         isRunning = false
         VpnPrefs.setRunning(this, false)
         try {
-            tun2socksProcess?.destroy()
-            tun2socksProcess = null
-            pfd?.close()
-            pfd = null
-            coreController?.stopLoop()
-            coreController = null
+            tun2socksProcess?.destroy(); tun2socksProcess = null
+            pfd?.close();               pfd = null
+            coreController?.stopLoop(); coreController = null
         } catch (e: Exception) {
             Log.e(TAG, "Error stopping tunnel", e)
         }
@@ -126,8 +135,8 @@ class V2RayVpnService : VpnService(), CoreCallbackHandler {
     }
 
     private fun startTun2socks(tunFd: Int) {
-        val tunPath  = "${applicationInfo.nativeLibraryDir}/libtun2socks.so"
-        val cfgFile  = java.io.File(filesDir, "hev-tun.yml")
+        val tunPath = "${applicationInfo.nativeLibraryDir}/libtun2socks.so"
+        val cfgFile = java.io.File(filesDir, "hev-tun.yml")
         cfgFile.writeText("""
 tunnel:
   fd: $tunFd
@@ -163,33 +172,64 @@ misc:
         } catch (_: Exception) {}
     }
 
+    // ── Live notification stats ───────────────────────────────────────────
+
+    private fun startNotifStatsLoop() {
+        scope.launch {
+            var prevRx = TrafficStats.getTotalRxBytes()
+            var prevTx = TrafficStats.getTotalTxBytes()
+            while (isActive) {
+                delay(2_000)
+                val currRx = TrafficStats.getTotalRxBytes()
+                val currTx = TrafficStats.getTotalTxBytes()
+                val dlBps = ((currRx - prevRx).coerceAtLeast(0L)) / 2
+                val ulBps = ((currTx - prevTx).coerceAtLeast(0L)) / 2
+                prevRx = currRx
+                prevTx = currTx
+                updateNotifStats(dlBps, ulBps)
+            }
+        }
+    }
+
+    private fun updateNotifStats(dlBps: Long, ulBps: Long) {
+        val nm = getSystemService(NotificationManager::class.java) ?: return
+        val notif = buildNotification("↓ ${fmtSpeed(dlBps)}  ↑ ${fmtSpeed(ulBps)}", dlBps, ulBps)
+        nm.notify(NOTIF_ID, notif)
+    }
+
+    private fun fmtSpeed(bps: Long): String = when {
+        bps >= 1_048_576 -> "%.1f MB/s".format(bps / 1_048_576.0)
+        bps >= 1_024     -> "%.0f KB/s".format(bps / 1_024.0)
+        else             -> "${bps} B/s"
+    }
+
     // ── Foreground notification ───────────────────────────────────────────
 
-    private fun startForegroundNotification() {
+    private fun startForegroundNotification(text: String, dlBps: Long, ulBps: Long) {
         createNotificationChannel()
-        val notif = NotificationCompat.Builder(this, CHANNEL_ID)
+        startForeground(NOTIF_ID, buildNotification(text, dlBps, ulBps))
+    }
+
+    private fun buildNotification(text: String, dlBps: Long, ulBps: Long): Notification {
+        val contentIntent = PendingIntent.getActivity(
+            this, 0,
+            Intent(this, MainActivity::class.java),
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+        val stopIntent = PendingIntent.getService(
+            this, 1,
+            Intent(this, V2RayVpnService::class.java).apply { action = ACTION_STOP },
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+        return NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle(getString(R.string.app_name))
-            .setContentText(getString(R.string.notification_connected))
+            .setContentText(text)
             .setSmallIcon(R.drawable.ic_notification)
             .setOngoing(true)
-            .setContentIntent(
-                PendingIntent.getActivity(
-                    this, 0,
-                    Intent(this, MainActivity::class.java),
-                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-                )
-            )
-            .addAction(
-                android.R.drawable.ic_menu_close_clear_cancel,
-                "Disconnect",
-                PendingIntent.getService(
-                    this, 1,
-                    Intent(this, V2RayVpnService::class.java).apply { action = ACTION_STOP },
-                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-                )
-            )
+            .setOnlyAlertOnce(true)
+            .setContentIntent(contentIntent)
+            .addAction(android.R.drawable.ic_menu_close_clear_cancel, "Disconnect", stopIntent)
             .build()
-        startForeground(NOTIF_ID, notif)
     }
 
     private fun createNotificationChannel() {
@@ -201,7 +241,7 @@ misc:
         getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
     }
 
-    // ── CoreCallbackHandler callbacks ─────────────────────────────────────
+    // ── CoreCallbackHandler ───────────────────────────────────────────────
 
     override fun shutdown(): Long { stopTunnel(); return 0L }
     override fun startup(): Long = 0L

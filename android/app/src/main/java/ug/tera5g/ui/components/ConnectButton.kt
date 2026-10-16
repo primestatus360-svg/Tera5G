@@ -162,6 +162,7 @@ fun ConnectButton(
                         contentDescription = "Connect / Disconnect",
                         modifier           = Modifier
                             .size(76.dp)
+                            .clip(CircleShape)
                             .graphicsLayer {
                                 rotationZ = if (isConnecting) rotation else 0f
                                 val s = if (isConnected) logoBreath else 1f

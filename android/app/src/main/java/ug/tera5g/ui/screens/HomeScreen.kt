@@ -40,10 +40,12 @@ fun HomeScreen(
     val routingMode   by viewModel.routingMode.collectAsState()
     val connMode      by viewModel.connectionMode.collectAsState()
     val permIntent    by viewModel.vpnPermissionIntent.collectAsState()
-    val downloadSpeed by viewModel.downloadSpeed.collectAsState()
-    val uploadSpeed   by viewModel.uploadSpeed.collectAsState()
-    val networkName   by viewModel.networkName.collectAsState()
-    val signalLevel   by viewModel.signalLevel.collectAsState()
+    val downloadSpeed    by viewModel.downloadSpeed.collectAsState()
+    val uploadSpeed      by viewModel.uploadSpeed.collectAsState()
+    val sessionDown      by viewModel.sessionDownloaded.collectAsState()
+    val sessionUp        by viewModel.sessionUploaded.collectAsState()
+    val networkName      by viewModel.networkName.collectAsState()
+    val signalLevel      by viewModel.signalLevel.collectAsState()
     val forcePaywall  by viewModel.forceShowPaywall.collectAsState()
 
     val permLauncher = rememberLauncherForActivityResult(
@@ -164,10 +166,12 @@ fun HomeScreen(
                 ) {
                     Column {
                         PremiumConnectedCard(
-                            networkName   = networkName,
-                            signalLevel   = signalLevel,
-                            downloadSpeed = downloadSpeed,
-                            uploadSpeed   = uploadSpeed
+                            networkName      = networkName,
+                            signalLevel      = signalLevel,
+                            downloadSpeed    = downloadSpeed,
+                            uploadSpeed      = uploadSpeed,
+                            sessionDownBytes = sessionDown,
+                            sessionUpBytes   = sessionUp
                         )
                         Spacer(Modifier.height(28.dp))
                     }
@@ -244,7 +248,9 @@ private fun PremiumConnectedCard(
     networkName: String?,
     signalLevel: Int,
     downloadSpeed: Long,
-    uploadSpeed: Long
+    uploadSpeed: Long,
+    sessionDownBytes: Long,
+    sessionUpBytes: Long
 ) {
     Box(
         Modifier
@@ -344,6 +350,37 @@ private fun PremiumConnectedCard(
                 SpeedChip(arrow = "↓", label = "Download", speed = downloadSpeed, color = NeonGreen)
                 SpeedChip(arrow = "↑", label = "Upload",   speed = uploadSpeed,   color = ConnectingBlue)
             }
+
+            Spacer(Modifier.height(12.dp))
+            Box(Modifier.fillMaxWidth().height(1.dp).background(GlassBorder))
+            Spacer(Modifier.height(12.dp))
+
+            // Session data consumed
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    "Session Data",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.50f)
+                )
+                Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                    Text(
+                        "↓ ${formatBytes(sessionDownBytes)}",
+                        style      = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.Medium,
+                        color      = NeonGreen.copy(alpha = 0.85f)
+                    )
+                    Text(
+                        "↑ ${formatBytes(sessionUpBytes)}",
+                        style      = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.Medium,
+                        color      = ConnectingBlue.copy(alpha = 0.85f)
+                    )
+                }
+            }
         }
     }
 }
@@ -398,4 +435,11 @@ private fun formatSpeed(bytesPerSec: Long): String = when {
     bytesPerSec >= 1_048_576 -> "%.1f MB/s".format(bytesPerSec / 1_048_576.0)
     bytesPerSec >= 1_024     -> "%.0f KB/s".format(bytesPerSec / 1_024.0)
     else                     -> "${bytesPerSec} B/s"
+}
+
+private fun formatBytes(bytes: Long): String = when {
+    bytes >= 1_073_741_824 -> "%.2f GB".format(bytes / 1_073_741_824.0)
+    bytes >= 1_048_576     -> "%.1f MB".format(bytes / 1_048_576.0)
+    bytes >= 1_024         -> "%.0f KB".format(bytes / 1_024.0)
+    else                   -> "${bytes} B"
 }

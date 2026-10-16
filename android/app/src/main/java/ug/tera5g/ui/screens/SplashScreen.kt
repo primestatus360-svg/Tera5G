@@ -9,6 +9,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -84,7 +85,7 @@ fun SplashScreen(onComplete: () -> Unit) {
                 Image(
                     painter            = painterResource(R.mipmap.ic_launcher_foreground),
                     contentDescription = "Tera5G",
-                    modifier           = Modifier.size(148.dp)
+                    modifier           = Modifier.size(148.dp).clip(CircleShape)
                 )
             }
 

@@ -78,7 +78,7 @@ app.use(express.json({ limit: '1mb' }));
 // ── Admin panel ──────────────────────────────────────────────────────────────
 const publicDir = path.join(__dirname, '..', 'public');   // /app/public
 app.use(express.static(publicDir));
-app.get('/',           (_req, res) => res.redirect('/admin.html'));
+app.get('/',           (_req, res) => res.sendFile(path.join(publicDir, 'index.html')));
 app.get('/admin',      (_req, res) => res.sendFile(path.join(publicDir, 'admin.html')));
 app.get('/admin.html', (_req, res) => res.sendFile(path.join(publicDir, 'admin.html')));
 

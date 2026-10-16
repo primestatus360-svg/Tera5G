@@ -9,6 +9,7 @@ object VpnPrefs {
     private const val KEY_RUNNING = "was_running"
     private const val KEY_MODE    = "last_connection_mode"
     private const val KEY_ROUTING = "last_routing_mode"
+    private const val KEY_CONFIG  = "last_config_json"
 
     fun setRunning(context: Context, running: Boolean) {
         prefs(context).edit().putBoolean(KEY_RUNNING, running).apply()
@@ -31,6 +32,17 @@ object VpnPrefs {
     fun getLastRoutingMode(context: Context): RoutingMode = try {
         RoutingMode.valueOf(prefs(context).getString(KEY_ROUTING, null) ?: "")
     } catch (_: IllegalArgumentException) { RoutingMode.SMART }
+
+    fun saveConfigJson(context: Context, json: String) {
+        prefs(context).edit().putString(KEY_CONFIG, json).apply()
+    }
+
+    fun getConfigJson(context: Context): String? =
+        prefs(context).getString(KEY_CONFIG, null)
+
+    fun clearConfigJson(context: Context) {
+        prefs(context).edit().remove(KEY_CONFIG).apply()
+    }
 
     private fun prefs(context: Context) =
         context.getSharedPreferences(NAME, Context.MODE_PRIVATE)

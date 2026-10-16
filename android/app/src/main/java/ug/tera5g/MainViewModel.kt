@@ -45,6 +45,12 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     private val _uploadSpeed = MutableStateFlow(0L)
     val uploadSpeed: StateFlow<Long> = _uploadSpeed.asStateFlow()
 
+    private val _sessionDownloaded = MutableStateFlow(0L)
+    val sessionDownloaded: StateFlow<Long> = _sessionDownloaded.asStateFlow()
+
+    private val _sessionUploaded = MutableStateFlow(0L)
+    val sessionUploaded: StateFlow<Long> = _sessionUploaded.asStateFlow()
+
     private val _networkName = MutableStateFlow<String?>(null)
     val networkName: StateFlow<String?> = _networkName.asStateFlow()
 
@@ -130,6 +136,8 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
 
     private fun startNetworkStats() {
         statsJob?.cancel()
+        _sessionDownloaded.value = 0L
+        _sessionUploaded.value   = 0L
         statsJob = viewModelScope.launch {
             var prevRx = TrafficStats.getTotalRxBytes()
             var prevTx = TrafficStats.getTotalTxBytes()
@@ -138,8 +146,12 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                 delay(1_000)
                 val currRx = TrafficStats.getTotalRxBytes()
                 val currTx = TrafficStats.getTotalTxBytes()
-                _downloadSpeed.value = (currRx - prevRx).coerceAtLeast(0L)
-                _uploadSpeed.value   = (currTx - prevTx).coerceAtLeast(0L)
+                val dlDelta = (currRx - prevRx).coerceAtLeast(0L)
+                val ulDelta = (currTx - prevTx).coerceAtLeast(0L)
+                _downloadSpeed.value      = dlDelta
+                _uploadSpeed.value        = ulDelta
+                _sessionDownloaded.value += dlDelta
+                _sessionUploaded.value   += ulDelta
                 prevRx = currRx
                 prevTx = currTx
                 if (tick % 5 == 0) updateNetworkInfo()
@@ -172,8 +184,10 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     private fun stopMonitoringJobs() {
         statsJob?.cancel();      statsJob = null
         accessPollJob?.cancel(); accessPollJob = null
-        _downloadSpeed.value = 0L
-        _uploadSpeed.value   = 0L
+        _downloadSpeed.value     = 0L
+        _uploadSpeed.value       = 0L
+        _sessionDownloaded.value = 0L
+        _sessionUploaded.value   = 0L
     }
 
     private fun updateNetworkInfo() {

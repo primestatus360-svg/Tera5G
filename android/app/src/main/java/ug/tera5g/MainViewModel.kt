@@ -34,7 +34,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     private val _routingMode  = MutableStateFlow(RoutingMode.SMART)
     val routingMode: StateFlow<RoutingMode> = _routingMode.asStateFlow()
 
-    private val _connectionMode = MutableStateFlow(ConnectionMode.HIGH_SPEED)
+    private val _connectionMode = MutableStateFlow(ConnectionMode.FREE_BROWSE)
     val connectionMode: StateFlow<ConnectionMode> = _connectionMode.asStateFlow()
 
     private val _vpnPermissionIntent = MutableStateFlow<Intent?>(null)
@@ -163,7 +163,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
 
             // Try up to 30 configs; 5 s timeout per attempt (AM Tunnel uses 3 s).
             for (cfg in ordered.take(30)) {
-                val json = FreeModeManager.buildXrayJson(cfg)
+                val json = FreeModeManager.buildWgSettings(cfg)
                 ug.tera5g.v2ray.VpnPrefs.saveLastMode(ctx, _connectionMode.value, _routingMode.value)
                 V2RayController.connectFreeMode(ctx, json)
 

@@ -1,3 +1,7 @@
+# ── WireGuard native library — accessed via reflection, must not be renamed ───
+-keep class com.wireguard.android.backend.GoBackend { *; }
+-dontwarn com.wireguard.android.**
+
 # ── V2Ray / Xray native library ───────────────────────────────────────────────
 -keep class libv2ray.** { *; }
 -dontwarn libv2ray.**

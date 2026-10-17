@@ -39,10 +39,10 @@ fun ConnectionModeSelector(
     modifier: Modifier = Modifier
 ) {
     val modes = listOf(
+        ConnectionMode.FREE_BROWSE,
         ConnectionMode.HIGH_SPEED,
         ConnectionMode.ULTRA_SECURE,
-        ConnectionMode.LIGHTNING,
-        ConnectionMode.FREE_BROWSE
+        ConnectionMode.LIGHTNING
     )
     Column(modifier, verticalArrangement = Arrangement.spacedBy(8.dp)) {
         modes.forEach { mode ->

@@ -52,13 +52,19 @@ android {
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
 
-            val releaseKey = localProps.getProperty("CONFIG_AES_KEY", "")
-            if (releaseKey.isEmpty() || !releaseKey.matches(Regex("[0-9a-fA-F]{64}"))) {
-                throw GradleException(
-                    "\n\n❌  CONFIG_AES_KEY is missing or invalid in android/local.properties.\n" +
-                    "   Generate with: openssl rand -hex 32\n" +
-                    "   Then add:      CONFIG_AES_KEY=<64-char hex result>\n\n"
-                )
+            // Only validate the key when actually assembling a release variant.
+            // Checking gradle.startParameter avoids throwing during debug builds in CI.
+            val isBuildingRelease = gradle.startParameter.taskNames
+                .any { it.contains("Release", ignoreCase = true) }
+            if (isBuildingRelease) {
+                val releaseKey = localProps.getProperty("CONFIG_AES_KEY", "")
+                if (releaseKey.isEmpty() || !releaseKey.matches(Regex("[0-9a-fA-F]{64}"))) {
+                    throw GradleException(
+                        "\n\n❌  CONFIG_AES_KEY is missing or invalid in android/local.properties.\n" +
+                        "   Generate with: openssl rand -hex 32\n" +
+                        "   Then add:      CONFIG_AES_KEY=<64-char hex result>\n\n"
+                    )
+                }
             }
 
             val sc = signingConfigs.findByName("release")

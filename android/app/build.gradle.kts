@@ -134,7 +134,5 @@ dependencies {
     // SSH tunnel
     implementation("com.trilead:trilead-ssh2:1.0.0-build222")
 
-    // WireGuard native tunnel — provides libwg.so for all ABIs (arm64-v8a, armeabi-v7a, x86_64)
-    // Used by Free Browse mode to bypass xray-core's netstack (which crashes on armeabi-v7a)
-    implementation("com.wireguard.android:tunnel:1.0.20230706")
+    // libwg-go.so + libwg.so are bundled in src/main/jniLibs — no Maven dep needed.
 }

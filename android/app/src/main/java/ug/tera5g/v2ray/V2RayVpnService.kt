@@ -7,6 +7,8 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.net.ConnectivityManager
 import android.net.LinkProperties
+import android.net.Network
+import android.net.NetworkCapabilities
 import android.net.TrafficStats
 import android.net.VpnService
 import android.os.*
@@ -18,7 +20,8 @@ import libv2ray.CoreController
 import libv2ray.Libv2ray
 import ug.tera5g.R
 import ug.tera5g.MainActivity
-import ug.tera5g.freemode.WireGuardNative
+import ug.tera5g.freemode.FreeModeConfig
+import ug.tera5g.freemode.HttpConnectTunnel
 import java.net.Inet4Address
 import java.util.concurrent.TimeUnit
 
@@ -42,7 +45,7 @@ class V2RayVpnService : VpnService(), CoreCallbackHandler {
     private var coreController: CoreController? = null
     private var pfd: ParcelFileDescriptor? = null
     private var tun2socksProcess: java.lang.Process? = null
-    private var wgHandle: Int = -1
+    private var httpTunnel: HttpConnectTunnel? = null
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
     // Catch system power-off and cleanly release the TUN fd before Android
@@ -63,14 +66,17 @@ class V2RayVpnService : VpnService(), CoreCallbackHandler {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        // Always call startForeground() before any early return — prevents
+        // RemoteServiceException on rapid stop/start cycles (Android 8+).
+        startForegroundNotification("Connecting…", 0L, 0L)
+
         when (intent?.action) {
             ACTION_START -> {
                 val configJson = intent.getStringExtra(EXTRA_CONFIG_JSON)
                     ?: VpnPrefs.getConfigJson(this)
-                    ?: return START_NOT_STICKY
+                    ?: run { stopTunnel(); return START_NOT_STICKY }
                 val isFreeBrowse = intent.getBooleanExtra(EXTRA_IS_FREE_BROWSE, false)
                 VpnPrefs.saveConfigJson(this, configJson)
-                startForegroundNotification("Connecting…", 0L, 0L)
                 scope.launch { startTunnel(configJson, isFreeBrowse) }
                 return START_NOT_STICKY
             }
@@ -78,7 +84,7 @@ class V2RayVpnService : VpnService(), CoreCallbackHandler {
                 VpnPrefs.clearConfigJson(this)
                 stopTunnel()
             }
-            null -> { /* system restart — do nothing, user taps reconnect */ }
+            null -> { stopTunnel() }
         }
         return START_NOT_STICKY
     }
@@ -98,7 +104,7 @@ class V2RayVpnService : VpnService(), CoreCallbackHandler {
 
     // ── Tunnel start/stop ─────────────────────────────────────────────────
 
-    private fun startTunnel(configJson: String, isFreeBrowse: Boolean = false) {
+    private suspend fun startTunnel(configJson: String, isFreeBrowse: Boolean = false) {
         try {
             val builder = Builder()
                 .setSession("Tera5G")
@@ -110,31 +116,38 @@ class V2RayVpnService : VpnService(), CoreCallbackHandler {
             val dnsServers = if (isFreeBrowse) getCarrierDns() else listOf("1.1.1.1", "8.8.8.8")
             dnsServers.forEach { builder.addDnsServer(it) }
 
-            if (isFreeBrowse) {
-                // Route all traffic except 10.0.0.0/8 through the TUN so the
-                // WireGuard server at 10.7.x.x stays reachable via the carrier.
-                builder.addRoute("0.0.0.0", 1)    // 0.0.0.0/1  covers 0–127
-                builder.addRoute("128.0.0.0", 1)  // 128.0.0.0/1 covers 128–255
-                builder.addRoute("172.16.0.0", 12)
-                builder.addRoute("192.168.0.0", 16)
-            } else {
-                builder.addRoute("0.0.0.0", 0)
-                builder.addRoute("::", 0)
-            }
+            builder.addRoute("0.0.0.0", 0)
+            builder.addRoute("::", 0)
 
             loadBypassApps(builder)
 
             if (isFreeBrowse) {
-                // ── Free Browse: native wireguard-go via libwg.so ─────────────
-                // Establish TUN first (need the fd), then hand it to wireguard-go.
-                // xray-core is NOT involved — its userspace netstack crashes on
-                // armeabi-v7a; wireguard-go with a real kernel TUN fd does not.
+                // ── Free Browse: HTTP CONNECT injection via local SOCKS5 proxy ─
+                // configJson carries a FreeModeConfig JSON (not WireGuard UAPI).
+                val cfg = FreeModeConfig.fromJson(configJson)
+
+                // Probe the proxy server before establishing the TUN so that we
+                // can fail fast without leaving a dangling VPN interface.
+                val tunnel = HttpConnectTunnel(
+                    proxyHost     = cfg.proxyHost,
+                    proxyPort     = cfg.proxyPort,
+                    injectHost    = cfg.injectHost,
+                    protectSocket = { sock -> protect(sock) }
+                )
+                if (!tunnel.testConnection()) {
+                    throw Exception("Proxy unreachable: ${cfg.proxyHost}:${cfg.proxyPort}")
+                }
+
+                // Start the local SOCKS5 server, then establish TUN + tun2socks.
+                tunnel.start(scope)
+                httpTunnel = tunnel
+                kotlinx.coroutines.delay(150)  // let ServerSocket bind
+
                 pfd = builder.establish() ?: throw Exception("VPN tunnel establishment failed")
-                startNativeWireGuard(configJson)
+                startTun2socks(pfd!!.fd)
+
             } else {
                 // ── Normal mode: xray-core + tun2socks ───────────────────────
-                // xray-core must start first (opens SOCKS listener on 10808),
-                // then the TUN is established, then tun2socks bridges them.
                 V2RayAssets.copyToFilesDir(this)
                 Libv2ray.initCoreEnv(filesDir.absolutePath, "")
                 java.io.File(filesDir, "last_config.json").writeText(configJson)
@@ -158,25 +171,6 @@ class V2RayVpnService : VpnService(), CoreCallbackHandler {
         }
     }
 
-    /**
-     * Hand the VPN TUN fd directly to wireguard-go via libwg.so (wireguard-android).
-     * [wgSettings] is a WireGuard UAPI settings string (private_key, peer public_key,
-     * endpoint, allowed_ip) with keys in lowercase hex.
-     */
-    private fun startNativeWireGuard(wgSettings: String) {
-        val fd = pfd?.fd ?: throw Exception("No TUN fd for WireGuard")
-        val handle = WireGuardNative.turnOn("wg0", fd, wgSettings)
-        if (handle < 0) throw Exception("wgTurnOn failed ($handle)")
-        wgHandle = handle
-        // Protect WireGuard's UDP sockets so they route through the carrier,
-        // not back into our own VPN TUN (which would loop infinitely).
-        val v4 = WireGuardNative.getSocketV4(handle)
-        val v6 = WireGuardNative.getSocketV6(handle)
-        if (v4 > 0) protect(v4)
-        if (v6 > 0) protect(v6)
-        Log.i(TAG, "Native WireGuard started handle=$handle")
-    }
-
     private fun stopTunnel() {
         scope.coroutineContext.cancelChildren()
         isRunning = false
@@ -188,14 +182,11 @@ class V2RayVpnService : VpnService(), CoreCallbackHandler {
         } catch (e: Exception) {
             Log.e(TAG, "Error closing TUN fd", e)
         }
-        // Stop native WireGuard (Free Browse mode)
-        val wg = wgHandle
-        if (wg >= 0) {
-            wgHandle = -1
-            try { WireGuardNative.turnOff(wg) } catch (e: Exception) {
-                Log.e(TAG, "Error stopping WireGuard", e)
-            }
+        // Stop HTTP CONNECT tunnel (Free Browse mode)
+        try { httpTunnel?.stop() } catch (e: Exception) {
+            Log.e(TAG, "Error stopping HTTP tunnel", e)
         }
+        httpTunnel = null
         // Stop tun2socks (normal mode)
         try {
             tun2socksProcess?.let { proc ->

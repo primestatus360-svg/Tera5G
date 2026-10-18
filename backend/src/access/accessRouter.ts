@@ -12,7 +12,7 @@ accessRouter.get('/check', async (req: Request, res: Response) => {
         .eq('key', 'paywall_enabled')
         .limit(1);
 
-    const paywallEnabled = settingRows?.[0]?.value !== 'false';
+    const paywallEnabled = settingRows?.[0]?.value === 'true';
 
     if (!paywallEnabled) {
         return res.json({ active: true, plan: 'free', expiresAt: Date.now() + 24 * 60 * 60 * 1000 });

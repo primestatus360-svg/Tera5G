@@ -66,6 +66,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     private var serverConfig: ServerConfig? = null
     private var statsJob: Job? = null
     private var accessPollJob: Job? = null
+    private var freeModeJob: Job? = null
 
     init {
         refreshAccess()
@@ -141,11 +142,20 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             return
         }
 
-        viewModelScope.launch(Dispatchers.IO) {
-            // Bail out early if there is no carrier network at all.
+        freeModeJob?.cancel()
+        freeModeJob = viewModelScope.launch(Dispatchers.IO) {
             val cm = ctx.getSystemService(ConnectivityManager::class.java)
-            val activeNet: Network? = cm.activeNetwork
-            if (activeNet == null) {
+
+            // Require any radio link — cellular counts even without a data plan.
+            // Do NOT use cm.activeNetwork: Android sets it to null when there is no
+            // internet service, even though the cellular radio is live and WireGuard
+            // UDP packets can still flow through the carrier.
+            val hasRadio = cm.allNetworks.any { net ->
+                val caps = cm.getNetworkCapabilities(net) ?: return@any false
+                caps.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) ||
+                caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)
+            }
+            if (!hasRadio) {
                 V2RayController.onStateChanged(VpnState.ERROR)
                 return@launch
             }
@@ -157,38 +167,61 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             }
 
             V2RayController.onStateChanged(VpnState.FINDING_SERVER)
+            var roundOffset = FreeModeManager.getStartIndex(ctx) % configs.size
+            var failRounds  = 0
 
-            val startIdx = FreeModeManager.getStartIndex(ctx) % configs.size
-            val ordered  = configs.drop(startIdx) + configs.take(startIdx)
+            // Keep trying as long as the user hasn't disconnected (coroutine is active).
+            while (isActive) {
+                val ordered = configs.drop(roundOffset) + configs.take(roundOffset)
+                var connected = false
 
-            // Try up to 30 configs; 5 s timeout per attempt (AM Tunnel uses 3 s).
-            for (cfg in ordered.take(30)) {
-                val json = FreeModeManager.buildWgSettings(cfg)
-                ug.tera5g.v2ray.VpnPrefs.saveLastMode(ctx, _connectionMode.value, _routingMode.value)
-                V2RayController.connectFreeMode(ctx, json)
+                for (cfg in ordered) {
+                    if (!isActive) return@launch
 
-                var waited = 0
-                while (waited < 5_000) {
-                    delay(250)
-                    waited += 250
-                    when (vpnState.value) {
-                        VpnState.CONNECTED -> {
-                            FreeModeManager.saveSuccessIndex(ctx, cfg.index)
-                            return@launch
+                    ug.tera5g.v2ray.VpnPrefs.saveLastMode(ctx, _connectionMode.value, _routingMode.value)
+                    V2RayController.connectFreeMode(ctx, cfg.toJson())
+
+                    var waited = 0
+                    while (waited < 12_000 && isActive) {
+                        delay(250); waited += 250
+                        when (vpnState.value) {
+                            VpnState.CONNECTED -> { FreeModeManager.saveSuccessIndex(ctx, cfg.index); connected = true }
+                            VpnState.ERROR     -> { }
+                            else               -> continue
                         }
-                        VpnState.ERROR -> break
-                        else -> {}
+                        break
                     }
-                }
-                if (vpnState.value == VpnState.CONNECTED) return@launch
 
-                V2RayController.disconnect(ctx)
-                delay(200)
+                    if (connected) break
+                    if (!isActive) return@launch
+                    V2RayController.disconnect(ctx)
+                    delay(300)
+                }
+
+                if (connected) {
+                    failRounds = 0
+                    // Hold until the connection drops, then retry automatically.
+                    while (isActive && vpnState.value == VpnState.CONNECTED) {
+                        delay(500)
+                    }
+                    if (!isActive) return@launch
+                    // Unexpected drop — keep state visible and retry from last-working config.
+                    V2RayController.onStateChanged(VpnState.FINDING_SERVER)
+                } else {
+                    // All configs failed this round — back off before the next sweep.
+                    failRounds++
+                    val backoffMs = minOf(failRounds * 5_000L, 60_000L)
+                    delay(backoffMs)
+                    roundOffset = (roundOffset + 1) % configs.size
+                    if (isActive) V2RayController.onStateChanged(VpnState.FINDING_SERVER)
+                }
             }
         }
     }
 
     fun disconnect() {
+        freeModeJob?.cancel()
+        freeModeJob = null
         V2RayController.disconnect(getApplication())
     }
 
